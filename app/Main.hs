@@ -154,9 +154,9 @@ runScan opt fp = do
                         | (ListVal @C (Key "fixme-id-show-len" [LitIntVal e]) ) <- r
                         ]
 
-  let tpref = lastDef "#" [ e
-                          | (ListVal @C (Key "fixme-tag-prefix" [LitStrVal e]) ) <- r
-                          ]
+  let tpref = lastDef "" [ (fromString.show.pretty) e
+                         | (ListVal @C (Key "fixme-tag-prefix" [e]) ) <- r
+                         ]
 
   files <- case fp of
            Nothing -> getDirectoryFilesIgnore "." masks ignore
