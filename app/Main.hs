@@ -30,9 +30,11 @@ import Data.Text (Text)
 import Options.Applicative hiding (Parser)
 import Options.Applicative qualified as O
 import Prettyprinter
+import Prettyprinter.Render.Text
 import Safe
 import System.Directory
 import System.FilePattern.Directory
+import Codec.Serialise
 
 import Lens.Micro.Platform
 
@@ -56,6 +58,7 @@ data Fixme =
   Fixme
   { _fixmeTag         :: FixmeTag
   , _fixmeTitle       :: FixmeTitle
+  , _fixmeId          :: FixmeHash
   , _fixmeFileGitHash :: GitHash
   , _fixmeFile        :: FilePath
   , _fixmeLine        :: Int
@@ -73,15 +76,30 @@ newtype ScanOpt =
 
 makeLenses 'ScanOpt
 
-data Format a = Brief a
+data FmtAttr =
+  FmtAttr
+  { _fmtShortId :: Int
+  , _fmtTagLen  :: Int
+  }
+
+makeLenses 'FmtAttr
+
+data Format a = Brief FmtAttr a
               | Full a
 
 instance Pretty (Format Fixme) where
-  pretty (Brief f) = pretty (view fixmeTag f)
-                      <+> pretty (Text.take 50 $ view fixmeTitle f)
+  pretty (Brief fmt f) =   pretty shortId
+                       <+> fill w (pretty (view fixmeTag f))
+                       <+> pretty (Text.take 50 $ view fixmeTitle f)
+
+    where
+      shortId = List.take (fmt ^. fmtShortId) (show (pretty (view fixmeId f)))
+      w = fmt ^. fmtTagLen
 
   pretty (Full f) = pretty (view fixmeTag f)
-                      <+> pretty (Text.take 50 $ view fixmeTitle f)
+                      <+> pretty (view fixmeTitle f)
+                      <> line
+                      <> "id:" <+> pretty (view fixmeId f)
                       <> line
                       <> "file-hash:" <+> pretty (view fixmeFileGitHash f)
                       <> line
@@ -129,6 +147,10 @@ runScan opt fp = do
                      | (ListVal @C (Key "fixme-prefix" fs) ) <- r
                      ]
 
+  let idlen = lastDef 8 [ e
+                        | (ListVal @C (Key "fixme-id-show-len" [LitIntVal e]) ) <- r
+                        ]
+
   files <- case fp of
            Nothing -> getDirectoryFilesIgnore "." masks ignore
            Just fn -> pure [fn]
@@ -137,10 +159,10 @@ runScan opt fp = do
 
   fme <- mconcat <$> mapConcurrently (parseFile fxdef) files
 
-  let fmt = if view scanFull opt == Just True then Full else Brief
+  let fmt = if view scanFull opt == Just True then Full else Brief o
+        where o = FmtAttr (fromIntegral idlen) 6
 
-  mapM_ (print.pretty.fmt) fme
-
+  putDoc (vcat (fmap (pretty.fmt) fme))
 
 parseFile :: FixmeDef -> FilePath -> IO [Fixme]
 parseFile def fp = do
@@ -157,7 +179,8 @@ parseFile def fp = do
   let ls = IntMap.fromList txt
 
   heads' <- forM txt $ \(i,s) -> do
-             let fixme0 = Fixme "" "" gh fp i 0 mempty
+             let h = fixmeHash $ serialise (gh,i)
+             let fixme0 = Fixme "" "" h gh fp i 0 mempty
              let fixme = parseOnly (pHeader def fixme0) s
              pure $ either mempty (List.singleton . (i,)) fixme
 

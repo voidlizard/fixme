@@ -64,6 +64,7 @@ executable fixme
       Fixme.OrDie
       Fixme.Git
       Fixme.Hash
+      Fixme.Base58
 
     -- other-extensions:
     build-depends:   base
@@ -83,6 +84,7 @@ executable fixme
                    , optparse-applicative
                    , prettyprinter
                    , safe
+                   , serialise
                    , suckless-conf
                    , text
                    , uniplate

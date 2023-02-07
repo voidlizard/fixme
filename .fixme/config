@@ -12,4 +12,6 @@ fixme-files doc/devlog
 
 fixme-files-ignore .direnv/** dist-newstyle/**
 
+fixme-id-show-len 10
+
 
