@@ -63,12 +63,14 @@ executable fixme
       Fixme.Defaults
       Fixme.OrDie
       Fixme.Git
+      Fixme.Hash
 
     -- other-extensions:
     build-depends:   base
                    , async
                    , attoparsec
                    , base16-bytestring
+                   , base58-bytestring
                    , bytestring
                    , containers
                    , cryptonite

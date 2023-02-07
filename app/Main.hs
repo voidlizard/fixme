@@ -6,6 +6,7 @@ module Main where
 import Fixme.Defaults
 import Fixme.OrDie
 import Fixme.Git
+import Fixme.Hash
 
 import Data.Config.Suckless
 
