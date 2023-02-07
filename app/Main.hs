@@ -109,7 +109,7 @@ instance Pretty (Format Fixme) where
 
                       <> line
                       <> line
-                      <> vcat (fmap pretty (view fixmeBody f))
+                      <> vcat (fmap (indent 0 . pretty) (view fixmeBody f))
                       <> line
 
 runInit  :: IO ()
