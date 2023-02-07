@@ -3,16 +3,21 @@
 
 Итак, приступим
 
+TODO: читать весь FIXE, не только заголовок
+
+TODO: считать хэши для каждого FIXME
+
+TODO: идентацию для каждого FIXME
 
 FIXME:  найти файлы по маске
 
 FIXME: найти все вхождения для fixme в найденных
   файлах, имея в виду следующий формат:
 
-```
-identation comment space+ tag space space* char char* eol
-(identation comment space+ char* eol)+
-eol | identation /= fixme.identation
+  ```
+  identation comment space+ tag space space* char char* eol
+  (identation comment space+ char* eol)+
+  eol | identation /= fixme.identation
+  ```
 
-```
 
