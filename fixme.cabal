@@ -62,17 +62,21 @@ executable fixme
     other-modules:
       Fixme.Defaults
       Fixme.OrDie
+      Fixme.Git
 
     -- other-extensions:
     build-depends:   base
                    , async
                    , attoparsec
+                   , base16-bytestring
                    , bytestring
                    , containers
+                   , cryptonite
                    , directory
                    , filepath
                    , filepattern
                    , interpolatedstring-perl6
+                   , memory
                    , microlens-platform
                    , optparse-applicative
                    , prettyprinter

@@ -5,30 +5,33 @@ module Main where
 
 import Fixme.Defaults
 import Fixme.OrDie
+import Fixme.Git
 
 import Data.Config.Suckless
-
-import Data.Text (Text)
-import Data.Text qualified as Text
-import Data.Text.IO qualified as Text
-import Data.String
 
 import Control.Concurrent.Async
 import Control.Monad
 import Data.Attoparsec.Text
 import Data.Attoparsec.Text qualified as Atto
+import Data.ByteString.Lazy.Char8 qualified as LBS
 import Data.Foldable (for_)
 import Data.Generics.Uniplate.Data()
 import Data.IntMap (IntMap)
 import Data.IntMap qualified as IntMap
 import Data.List qualified as List
+import Data.Maybe
+import Data.String
+import Data.Text.Encoding
+import Data.Text.Encoding.Error (ignore)
+import Data.Text.IO qualified as Text
+import Data.Text qualified as Text
+import Data.Text (Text)
 import Options.Applicative hiding (Parser)
 import Options.Applicative qualified as O
 import Prettyprinter
+import Safe
 import System.Directory
 import System.FilePattern.Directory
-import Data.Maybe
-import Safe
 
 import Lens.Micro.Platform
 
@@ -50,12 +53,13 @@ type FixmeTag = Text
 
 data Fixme =
   Fixme
-  { _fixmeTag    :: FixmeTag
-  , _fixmeTitle  :: FixmeTitle
-  , _fixmeFile   :: FilePath
-  , _fixmeLine   :: Int
-  , _fixmeIndent :: Int
-  , _fixmeBody   :: [Text]
+  { _fixmeTag         :: FixmeTag
+  , _fixmeTitle       :: FixmeTitle
+  , _fixmeFileGitHash :: GitHash
+  , _fixmeFile        :: FilePath
+  , _fixmeLine        :: Int
+  , _fixmeIndent      :: Int
+  , _fixmeBody        :: [Text]
   }
   deriving stock (Show)
 
@@ -77,6 +81,8 @@ instance Pretty (Format Fixme) where
 
   pretty (Full f) = pretty (view fixmeTag f)
                       <+> pretty (Text.take 50 $ view fixmeTitle f)
+                      <> line
+                      <> "file-hash:" <+> pretty (view fixmeFileGitHash f)
                       <> line
                       <> "file:" <+> pretty (view fixmeFile f)
                                  <> colon
@@ -137,15 +143,20 @@ runScan opt fp = do
 
 parseFile :: FixmeDef -> FilePath -> IO [Fixme]
 parseFile def fp = do
-  -- hPutStrLn stderr fp
   -- FIXME: check if file is too big
-  txt <- Text.readFile fp <&> Text.lines
-                          <&> zip [1..]
+
+  bs <- LBS.readFile fp
+  let gh = gitHash (Blob bs)
+
+  let utf8 = decodeUtf8With ignore (LBS.toStrict bs)
+
+  let txt = utf8 & Text.lines
+                 & zip [1..]
 
   let ls = IntMap.fromList txt
 
   heads' <- forM txt $ \(i,s) -> do
-             let fixme0 = Fixme "" "" fp i 0 mempty
+             let fixme0 = Fixme "" "" gh fp i 0 mempty
              let fixme = parseOnly (pHeader def fixme0) s
              pure $ either mempty (List.singleton . (i,)) fixme
 
