@@ -58,15 +58,24 @@ common shared-properties
 executable fixme
     import:           shared-properties
     main-is:          Main.hs
-    -- other-modules:
+
+    other-modules:
+      Fixme.Defaults
+      Fixme.OrDie
+
     -- other-extensions:
     build-depends:   base
                    , attoparsec
                    , bytestring
                    , containers
+                   , directory
+                   , filepath
+                   , interpolatedstring-perl6
+                   , optparse-applicative
+                   , prettyprinter
+                   , suckless-conf
                    , text
                    , uniplate
-                   , suckless-conf
 
     hs-source-dirs:   app
     default-language: Haskell2010

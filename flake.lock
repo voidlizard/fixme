@@ -109,11 +109,11 @@
         "nixpkgs": "nixpkgs_2"
       },
       "locked": {
-        "lastModified": 1675761989,
-        "narHash": "sha256-JJh+pOtwezuC3mAIsPHmP+O41z7evWLsbQyHhcsoJ4c=",
+        "lastModified": 1675766441,
+        "narHash": "sha256-fTnr879qlDsiyEswh6MaADXla9rW6isLz7C9V3ITb+Y=",
         "owner": "voidlizard",
         "repo": "suckless-conf",
-        "rev": "090eb1c4dc92732f0e055d926648517c258046d6",
+        "rev": "38616c4aa16acc2909b1ef1b15a44ef34ac3a339",
         "type": "github"
       },
       "original": {

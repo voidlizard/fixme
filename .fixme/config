@@ -1,0 +1,11 @@
+
+
+fixme-comments   // # --
+
+fixme-prefix     FIXME:     bugs issues
+
+fixme-files **/*.hs
+
+fixme-files doc/devlog
+
+
