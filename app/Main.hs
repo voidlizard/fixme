@@ -80,37 +80,40 @@ data FmtAttr =
   FmtAttr
   { _fmtShortId :: Int
   , _fmtTagLen  :: Int
+  , _fmtTagPref :: Text
   }
 
 makeLenses 'FmtAttr
 
 data Format a = Brief FmtAttr a
-              | Full a
+              | Full FmtAttr a
 
 instance Pretty (Format Fixme) where
-  pretty (Brief fmt f) =   pretty shortId
+  pretty (Brief fmt f) =   tp <> pretty shortId
                        <+> fill w (pretty (view fixmeTag f))
                        <+> pretty (Text.take 50 $ view fixmeTitle f)
 
     where
       shortId = List.take (fmt ^. fmtShortId) (show (pretty (view fixmeId f)))
       w = fmt ^. fmtTagLen
+      tp = pretty $ fmt ^. fmtTagPref
 
-  pretty (Full f) = pretty (view fixmeTag f)
-                      <+> pretty (view fixmeTitle f)
-                      <> line
-                      <> "id:" <+> pretty (view fixmeId f)
-                      <> line
-                      <> "file-hash:" <+> pretty (view fixmeFileGitHash f)
-                      <> line
-                      <> "file:" <+> pretty (view fixmeFile f)
-                                 <> colon
-                                 <> pretty (view fixmeLine f)
+  pretty (Full fmt f) = pretty (view fixmeTag f)
+                       <+> pretty (view fixmeTitle f)
+                       <> line
+                       <> "id:" <+> pretty (fmt ^. fmtTagPref)
+                                <>  pretty (view fixmeId f)
+                       <> line
+                       <> "file-hash:" <+> pretty (view fixmeFileGitHash f)
+                       <> line
+                       <> "file:" <+> pretty (view fixmeFile f)
+                                  <> colon
+                                  <> pretty (view fixmeLine f)
 
-                      <> line
-                      <> line
-                      <> vcat (fmap (indent 0 . pretty) (view fixmeBody f))
-                      <> line
+                       <> line
+                       <> line
+                       <> vcat (fmap (indent 0 . pretty) (view fixmeBody f))
+                       <> line
 
 runInit  :: IO ()
 runInit = do
@@ -151,6 +154,10 @@ runScan opt fp = do
                         | (ListVal @C (Key "fixme-id-show-len" [LitIntVal e]) ) <- r
                         ]
 
+  let tpref = lastDef "#" [ e
+                          | (ListVal @C (Key "fixme-tag-prefix" [LitStrVal e]) ) <- r
+                          ]
+
   files <- case fp of
            Nothing -> getDirectoryFilesIgnore "." masks ignore
            Just fn -> pure [fn]
@@ -159,8 +166,11 @@ runScan opt fp = do
 
   fme <- mconcat <$> mapConcurrently (parseFile fxdef) files
 
-  let fmt = if view scanFull opt == Just True then Full else Brief o
-        where o = FmtAttr (fromIntegral idlen) 6
+  let tl = maximumDef 6 $ fmap Text.length pref
+
+  let fmt = if view scanFull opt == Just True then Full o else Brief o
+        where
+          o = FmtAttr (fromIntegral idlen) tl tpref
 
   putDoc (vcat (fmap (pretty.fmt) fme))
 
