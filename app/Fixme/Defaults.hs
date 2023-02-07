@@ -16,7 +16,10 @@ defConfig = [qc|
 
 fixme-comments   // # ; --
 
-fixme-prefix     FIXME:     bugs issues
+fixme-prefix     FIXME:     bugs issues   ; defines a fixme entity and it's categories
+
+; fixme-files         ; sets file patterns to scan
+; fixme-files-ignore  ; sets file patterns to ignore
 
 |]
 

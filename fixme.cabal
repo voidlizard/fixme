@@ -76,6 +76,7 @@ executable fixme
                    , suckless-conf
                    , text
                    , uniplate
+                   , filepattern
 
     hs-source-dirs:   app
     default-language: Haskell2010
