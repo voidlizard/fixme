@@ -71,14 +71,15 @@ executable fixme
                    , containers
                    , directory
                    , filepath
+                   , filepattern
                    , interpolatedstring-perl6
+                   , microlens-platform
                    , optparse-applicative
                    , prettyprinter
+                   , safe
                    , suckless-conf
                    , text
                    , uniplate
-                   , filepattern
-                   , microlens-platform
 
     hs-source-dirs:   app
     default-language: Haskell2010

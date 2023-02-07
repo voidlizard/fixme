@@ -13,18 +13,22 @@ import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
 import Data.String
 
+import Control.Concurrent.Async
 import Control.Monad
 import Data.Attoparsec.Text
 import Data.Attoparsec.Text qualified as Atto
 import Data.Foldable (for_)
 import Data.Generics.Uniplate.Data()
+import Data.IntMap (IntMap)
+import Data.IntMap qualified as IntMap
 import Data.List qualified as List
 import Options.Applicative hiding (Parser)
 import Options.Applicative qualified as O
 import Prettyprinter
 import System.Directory
 import System.FilePattern.Directory
-import Control.Concurrent.Async
+import Data.Maybe
+import Safe
 
 import Lens.Micro.Platform
 
@@ -32,11 +36,6 @@ pattern Key :: forall {c}. Id -> [Syntax c] -> [Syntax c]
 pattern Key n ns <- SymbolVal  n : ns
 
 type C = MegaParsec
-
-newtype FixmeHeader =
-  FixmeHeader
-  { fixmeIndent :: Int
-  }
 
 data FixmeDef =
   FixmeDef
@@ -51,21 +50,42 @@ type FixmeTag = Text
 
 data Fixme =
   Fixme
-  { _fixmeTag   :: FixmeTag
-  , _fixmeTitle :: FixmeTitle
-  , _fixmeFile  :: FilePath
-  , _fixmeLine  :: Int
-  , _fixmeIdent :: Int
+  { _fixmeTag    :: FixmeTag
+  , _fixmeTitle  :: FixmeTitle
+  , _fixmeFile   :: FilePath
+  , _fixmeLine   :: Int
+  , _fixmeIndent :: Int
+  , _fixmeBody   :: [Text]
   }
   deriving stock (Show)
 
 makeLenses 'Fixme
 
-newtype Brief a = Brief a
+newtype ScanOpt =
+  ScanOpt
+  { _scanFull :: Maybe Bool
+  }
 
-instance Pretty (Brief Fixme) where
+makeLenses 'ScanOpt
+
+data Format a = Brief a
+              | Full a
+
+instance Pretty (Format Fixme) where
   pretty (Brief f) = pretty (view fixmeTag f)
                       <+> pretty (Text.take 50 $ view fixmeTitle f)
+
+  pretty (Full f) = pretty (view fixmeTag f)
+                      <+> pretty (Text.take 50 $ view fixmeTitle f)
+                      <> line
+                      <> "file:" <+> pretty (view fixmeFile f)
+                                 <> colon
+                                 <> pretty (view fixmeLine f)
+
+                      <> line
+                      <> line
+                      <> vcat (fmap pretty (view fixmeBody f))
+                      <> line
 
 runInit  :: IO ()
 runInit = do
@@ -78,8 +98,8 @@ runInit = do
   unless confExists do
     Text.writeFile confFile defConfig
 
-runScan :: IO ()
-runScan = do
+runScan :: ScanOpt -> Maybe FilePath -> IO ()
+runScan opt fp = do
 
   cfgFile <- readFile confFile
 
@@ -91,8 +111,8 @@ runScan = do
                       ]
 
   let ignore = mconcat [ fmap (show.pretty) fs
-                      | (ListVal @C (Key "fixme-files-ignore" fs) ) <- r
-                      ]
+                       | (ListVal @C (Key "fixme-files-ignore" fs) ) <- r
+                       ]
 
   let comm = mconcat [ fmap (fromString.show.pretty) fs
                      | (ListVal @C (Key "fixme-comments" fs) ) <- r
@@ -102,14 +122,17 @@ runScan = do
                      | (ListVal @C (Key "fixme-prefix" fs) ) <- r
                      ]
 
-  files <- getDirectoryFilesIgnore "." masks ignore
-
+  files <- case fp of
+           Nothing -> getDirectoryFilesIgnore "." masks ignore
+           Just fn -> pure [fn]
 
   let fxdef = FixmeDef (List.nub comm)  (List.nub ("FIXME:" : pref))
 
   fme <- mconcat <$> mapConcurrently (parseFile fxdef) files
 
-  mapM_ (print.pretty.Brief) fme
+  let fmt = if view scanFull opt == Just True then Full else Brief
+
+  mapM_ (print.pretty.fmt) fme
 
 
 parseFile :: FixmeDef -> FilePath -> IO [Fixme]
@@ -117,16 +140,53 @@ parseFile def fp = do
   -- hPutStrLn stderr fp
   -- FIXME: check if file is too big
   txt <- Text.readFile fp <&> Text.lines
-                          <&> zip [0..]
+                          <&> zip [1..]
 
-  r <- forM txt $ \(i,s) -> do
-        let fixme0 = Fixme "" "" fp i 0
-        let fixme = parseOnly (pHeader def fixme0) s
-        case fixme of
-          Left{}  -> pure mempty
-          Right h -> pure [h]
+  let ls = IntMap.fromList txt
 
-  pure (mconcat r)
+  heads' <- forM txt $ \(i,s) -> do
+             let fixme0 = Fixme "" "" fp i 0 mempty
+             let fixme = parseOnly (pHeader def fixme0) s
+             pure $ either mempty (List.singleton . (i,)) fixme
+
+  let heads = mconcat heads'
+  let hm = IntMap.fromList heads
+
+  forM heads  $ \(i,h) -> do
+    let (_, nx) = IntMap.split i ls
+
+    let ss = List.takeWhile ( \(j,_) -> not (IntMap.member j hm) )
+                            (IntMap.toList nx)
+
+    let lls = reverse $ nicer
+                      $ reverse
+                      $ go [] (view fixmeIndent h) (fmap snd ss)
+
+    let r = h & set fixmeBody (view fixmeTitle h : lls)
+    pure r
+
+  where
+
+    nicer [] = []
+    nicer (x:xs) | Text.null x = nicer xs
+                 | otherwise = x:xs
+
+    go acc  _ [] = acc
+
+    go acc  _ (e1:e2:_) | Text.null e1 && Text.null e2 = acc
+
+    go acc  i (s:rest)  |    calcIndent s > i
+                          || startsWithComment s
+                          || Text.null s  = go (acc <> [stripAll s]) i rest
+
+                         | otherwise = acc
+
+    stripComment s = headDef s $ catMaybes [ Text.stripPrefix p s | p <- view fixmeComm def  ]
+
+    stripAll s = Text.strip $ stripComment $ Text.strip s
+
+    startsWithComment s = or [ Text.isPrefixOf x ss | x <- view fixmeComm def ]
+      where ss = Text.strip s
 
 pHeader :: FixmeDef -> Fixme -> Parser Fixme
 pHeader fx fme = do
@@ -136,15 +196,26 @@ pHeader fx fme = do
   _      <- Atto.skipWhile isHorizontalSpace
   tag    <- choice tags
   _      <- Atto.skipWhile isHorizontalSpace
-  title  <- Text.pack <$> Atto.manyTill anyChar (endOfInput <|> endOfLine)
+  title' <- Text.pack <$> Atto.manyTill anyChar (endOfInput <|> endOfLine)
+  let title = Text.strip title'
 
-  pure $  fme & set fixmeTag   tag
-              & set fixmeTitle title
+  pure $  fme & set fixmeTag     tag
+              & set fixmeTitle   title
+              & set fixmeIndent  (calcIndent spaces)
 
   where
     comm = fmap string (view fixmeComm fx)
     tags = fmap string (view fixmeTags fx)
 
+calcIndent :: Text -> Int
+calcIndent txt = sum (fmap f s)
+  where
+    s0 = Text.takeWhile isHorizontalSpace txt
+    s = Text.unpack s0
+
+    f c | c == ' '  = 1
+        | c == '\t' = 4
+        | otherwise = 0
 
 main :: IO ()
 main = join . customExecParser (prefs showHelpOnError) $
@@ -161,7 +232,12 @@ main = join . customExecParser (prefs showHelpOnError) $
     pInit = do
       pure runInit
 
+    pScanOpts = do
+      ScanOpt <$> optional (flag' True ( long "full" <> short 'f' <> help "full format"))
+
     pScan = do
-      pure runScan
+      opts <- pScanOpts
+      fp <- optional $ strArgument ( metavar "HASH" )
+      pure (runScan opts fp)
 
 
