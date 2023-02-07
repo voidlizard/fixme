@@ -1,0 +1,74 @@
+cabal-version:      3.0
+name:               fixme
+version:            0.1.0.0
+-- synopsis:
+-- description:
+license:            BSD-3-Clause
+license-file:       LICENSE
+author:             Dmitry Zuikov
+maintainer:         dzuikov@gmail.com
+-- copyright:
+category:           Development
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+-- extra-source-files:
+
+common shared-properties
+  ghc-options:
+        -Wall
+        -- -fno-warn-unused-matches
+        -- -fno-warn-unused-do-bind
+        -- -Werror=missing-methods
+        -- -Werror=incomplete-patterns
+        -- -fno-warn-unused-binds
+        -- -threaded
+        -- -rtsopts
+        -- "-with-rtsopts=-N4 -A64m -AL256m -I0"
+
+
+  default-language:    Haskell2010
+
+  default-extensions:
+                       ApplicativeDo
+                     , BangPatterns
+                     , BlockArguments
+                     , ConstraintKinds
+                     , DataKinds
+                     , DeriveDataTypeable
+                     , DeriveGeneric
+                     , DerivingStrategies
+                     , DerivingVia
+                     , ExtendedDefaultRules
+                     , FlexibleContexts
+                     , FlexibleInstances
+                     , GADTs
+                     , GeneralizedNewtypeDeriving
+                     , ImportQualifiedPost
+                     , LambdaCase
+                     , MultiParamTypeClasses
+                     , OverloadedStrings
+                     , QuasiQuotes
+                     , ScopedTypeVariables
+                     , StandaloneDeriving
+                     , TupleSections
+                     , TypeApplications
+                     , TypeFamilies
+
+
+executable fixme
+    import:           shared-properties
+    main-is:          Main.hs
+    -- other-modules:
+    -- other-extensions:
+    build-depends:   base
+                   , attoparsec
+                   , bytestring
+                   , containers
+                   , text
+                   , uniplate
+                   , suckless-conf
+
+    hs-source-dirs:   app
+    default-language: Haskell2010
+
+
