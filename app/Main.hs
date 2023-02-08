@@ -192,7 +192,7 @@ parseFile def fp = do
              let h = fixmeHash $ serialise (gh,i)
              let fixme0 = Fixme "" "" h gh fp i 0 mempty
              let fixme = parseOnly (pHeader def fixme0) s
-             pure $ either mempty (List.singleton . (i,)) fixme
+             pure $ either mempty (List.singleton . (i,) . updateId) fixme
 
   let heads = mconcat heads'
   let hm = IntMap.fromList heads
@@ -211,6 +211,20 @@ parseFile def fp = do
     pure r
 
   where
+
+    -- NOTE: constructs id from hash(file,issue-content).
+    --       that promises that id's will be more or less
+    --       stable and dupes will be only, when content
+    --       is duplicated in the same file. It happens,
+    --       but it's not a good practice anyway.
+    updateId fx = fx & set fixmeId  hash
+      where
+        body  = view fixmeBody fx
+        file  = view fixmeFile fx
+        title = view fixmeTitle fx
+        tag   = view fixmeTag fx
+        bin   = serialise (file,tag,title,body)
+        hash  = fixmeHash bin
 
     nicer [] = []
     nicer (x:xs) | Text.null x = nicer xs
