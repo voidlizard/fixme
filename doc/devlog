@@ -1,6 +1,11 @@
 
 ## 2023-02-09
 
+TODO: skip-empty-fixmies
+
+  ignore empty fixme entries
+
+
 TODO: test-uuid
  $(uuid ce6655b5-840c-4ddd-9916-0909ed921c48)
 
