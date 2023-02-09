@@ -10,6 +10,9 @@ confDir = ".fixme"
 confFile :: FilePath
 confFile = confDir </> "config"
 
+logFile :: FilePath
+logFile = confDir </> "log"
+
 
 defConfig :: Text
 defConfig = [qc|
@@ -23,4 +26,11 @@ fixme-prefix     FIXME:     bugs issues   ; defines a fixme entity and it's cate
 ; fixme-files-ignore  ; sets file patterns to ignore
 
 |]
+
+
+defLog :: Text
+defLog = [qc|
+;; This is a log file. All fixmies status updates go here
+|]
+
 

@@ -87,8 +87,11 @@ executable fixme
                    , serialise
                    , suckless-conf
                    , text
+                   , typed-process
                    , uniplate
                    , uuid
+                   , unordered-containers
+                   , trie-simple
 
     hs-source-dirs:   app
     default-language: Haskell2010

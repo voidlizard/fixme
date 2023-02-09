@@ -1,6 +1,8 @@
 module Fixme.Git where
 
 import Codec.Serialise
+import Data.Function
+import Control.Monad.IO.Class
 import Crypto.Hash
 import Data.ByteArray qualified as BA
 import Data.ByteString.Base16 qualified as B16
@@ -10,7 +12,12 @@ import Data.ByteString.Lazy.Char8 qualified as LBS
 import Data.String (IsString(..))
 import GHC.Generics
 import Prettyprinter
+import System.Process.Typed
 import Text.InterpolatedString.Perl6 (qc)
+import Data.Text.Encoding qualified as Enc
+import Data.Text.Encoding.Error (ignore)
+import Data.Text qualified as Text
+import Lens.Micro.Platform
 
 newtype GitBlob a = Blob a
 
@@ -34,4 +41,34 @@ instance HasGitHash (GitBlob LBS.ByteString) where
     where
       hd = LBS.pack $ "blob" <> " " <> show (LBS.length s) <> "\x0"
       digest = hashlazy (hd <> s) :: Digest SHA1
+
+
+
+-- FIXME: check-return-code
+--   (uuid e0aed358-6757-4054-803c-3cd8066fd7cd)
+--
+gitListAllBlobs :: MonadIO m => m [(GitHash, FilePath)]
+gitListAllBlobs = do
+  let cmd = [qc|git rev-list --objects  --all --in-commit-order --filter=object:type=blob|]
+  let procCfg = setStdin closed $ setStderr closed (shell cmd)
+  (_, out, _) <- readProcess procCfg
+
+  pure $ LBS.lines out & foldMap (fromLine . LBS.words)
+
+
+  where
+    fromLine = \case
+      [ha, fname] -> [(fromString (LBS.unpack ha), asUtf8 fname)]
+      _           -> []
+
+
+    asUtf8 x =  Text.unpack (Enc.decodeUtf8With ignore (LBS.toStrict x))
+
+
+-- FIXME: check-return-code
+--   (uuid 3dacb893-6694-4644-ad58-93372a286351)
+
+gitReadObject :: MonadIO m => GitHash -> m LBS.ByteString
+gitReadObject h = do
+  readProcess (shell [qc|git cat-file blob {pretty h}|]) <&> view _2
 

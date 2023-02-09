@@ -10,6 +10,7 @@ import Fixme.Hash
 
 import Data.Config.Suckless
 
+import Data.Function
 import Codec.Serialise
 import Control.Concurrent.Async
 import Control.Monad
@@ -20,7 +21,6 @@ import Data.Generics.Uniplate.Data()
 import Data.IntMap qualified as IntMap
 import Data.List qualified as List
 import Data.Maybe
-import Data.Set qualified as Set
 import Data.String
 import Data.Text.Encoding
 import Data.Text.Encoding.Error (ignore)
@@ -33,10 +33,12 @@ import Prettyprinter
 import Prettyprinter.Render.Text
 import Safe
 import System.Directory
-import System.FilePattern.Directory
 import Data.UUID.V4 as UUID
-import System.Exit
 import Lens.Micro.Platform
+import System.FilePattern
+import Data.HashSet qualified as HashSet
+import System.Exit
+import Data.Trie.Set qualified as Trie
 
 pattern Key :: forall {c}. Id -> [Syntax c] -> [Syntax c]
 pattern Key n ns <- SymbolVal  n : ns
@@ -131,6 +133,9 @@ runInit = do
   unless confExists do
     Text.writeFile confFile defConfig
 
+  unless confExists do
+    Text.writeFile logFile defLog
+
 runUuid :: IO ()
 runUuid = do
   uuid <- UUID.nextRandom
@@ -140,9 +145,12 @@ runScan :: ScanOpt -> Maybe FilePath -> IO ()
 runScan opt fp = do
 
   cfgFile <- readFile confFile
+  logFileData <- readFile logFile
 
   -- FIXME: better error handling
   r <- pure (parseTop cfgFile) `orDie` "can't parse config"
+
+  log <- pure (parseTop logFileData) `orDie` "can't parse log"
 
   let masks = mconcat [ fmap (show.pretty) fs
                       | (ListVal @C (Key "fixme-files" fs) ) <- r
@@ -177,22 +185,41 @@ runScan opt fp = do
                          | (ListVal @C (Key "fixme-list-full-row-pref" [LitStrVal e]) ) <- r
                          ]
 
-  files <- case fp of
-           Nothing -> getDirectoryFilesIgnore "." masks ignore
-           Just fn -> pure [fn]
+  let toText = Text.pack . show . pretty
+
+  let merged = [ (toText a, toText b)
+               | ListVal @C (Key "fixme-merged" [SymbolVal a, SymbolVal b]) <- log
+               ] & Trie.fromList . fmap (Text.unpack . fst)
+
+  let fpat (h,f) =  or [ x ?== f | x <- masks ]
+                 && not (and [ x ?== f | x <- ignore ] )
+
+  files <- gitListAllBlobs <&> reverse . filter fpat
 
   let fxdef = FixmeDef (List.nub comm)  (List.nub ("FIXME:" : pref))
 
   let ids = view scanFilt opt
 
-  let filt fxm = null ids || or [ pre p | p <- ids ]
-        where tid = fromString $ show $ pretty (view fixmeId fxm)
-              tit = view fixmeTitle fxm
-              pre p =     Text.isPrefixOf p tid
+  -- FIXME: filt-might-be-very-slow
+  let filt fxm = notMerged && null ids || or [ pre p | p <- ids ]
+        where
+          tid = fromString $ show $ pretty (view fixmeId fxm)
+          tit = view fixmeTitle fxm
+          pre p =    Text.isPrefixOf p tid
                        || Text.isPrefixOf p tit
                        || Text.isPrefixOf p (view fixmeTag fxm)
 
-  fme <- filter filt . mconcat <$> mapConcurrently (parseFile fxdef) files
+          notMerged = Trie.null $ Trie.intersection merged prefAll
+
+          prefAll = Trie.fromList [ x :: String
+                                  | x <- prefAllL, length x >= 6
+                                  ]
+
+          prefAllL = Trie.toList $ Trie.prefixes (Trie.fromList [Text.unpack tid])
+
+
+  fme <- List.nubBy ((==) `on` view fixmeId) . filter filt . mconcat
+            <$> mapConcurrently (parseBlob fxdef) files
 
   let tl = maximumDef 6 $ fmap Text.length pref
 
@@ -207,13 +234,15 @@ runScan opt fp = do
 
   putDoc (vcat (fmap (pretty . fmt) fme))
 
-parseFile :: FixmeDef -> FilePath -> IO [Fixme]
-parseFile def fp = do
+
+parseBlob :: FixmeDef
+          -> (GitHash, FilePath)
+          -> IO [Fixme]
+
+parseBlob def (gh, fp) = do
   -- FIXME: check if file is too big
 
-  bs <- LBS.readFile fp
-  let gh = gitHash (Blob bs)
-
+  bs <- gitReadObject gh
   let utf8 = decodeUtf8With ignore (LBS.toStrict bs)
 
   let txt = utf8 & Text.lines
