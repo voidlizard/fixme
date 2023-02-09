@@ -10,17 +10,17 @@ import Fixme.Hash
 
 import Data.Config.Suckless
 
+import Codec.Serialise
 import Control.Concurrent.Async
 import Control.Monad
 import Data.Attoparsec.Text
 import Data.Attoparsec.Text qualified as Atto
 import Data.ByteString.Lazy.Char8 qualified as LBS
-import Data.Foldable (for_)
 import Data.Generics.Uniplate.Data()
-import Data.IntMap (IntMap)
 import Data.IntMap qualified as IntMap
 import Data.List qualified as List
 import Data.Maybe
+import Data.Set qualified as Set
 import Data.String
 import Data.Text.Encoding
 import Data.Text.Encoding.Error (ignore)
@@ -34,7 +34,6 @@ import Prettyprinter.Render.Text
 import Safe
 import System.Directory
 import System.FilePattern.Directory
-import Codec.Serialise
 
 import Lens.Micro.Platform
 
@@ -69,9 +68,10 @@ data Fixme =
 
 makeLenses 'Fixme
 
-newtype ScanOpt =
+data ScanOpt =
   ScanOpt
   { _scanFull :: Maybe Bool
+  , _scanFilt :: [Text]
   }
 
 makeLenses 'ScanOpt
@@ -164,7 +164,12 @@ runScan opt fp = do
 
   let fxdef = FixmeDef (List.nub comm)  (List.nub ("FIXME:" : pref))
 
-  fme <- mconcat <$> mapConcurrently (parseFile fxdef) files
+  let ids = view scanFilt opt
+
+  let filt fxm = null ids || or [ Text.isPrefixOf p tid | p <- ids ]
+        where tid = fromString $ show $ pretty (view fixmeId fxm)
+
+  fme <- filter filt . mconcat <$> mapConcurrently (parseFile fxdef) files
 
   let tl = maximumDef 6 $ fmap Text.length pref
 
@@ -293,6 +298,7 @@ main = join . customExecParser (prefs showHelpOnError) $
 
     pScanOpts = do
       ScanOpt <$> optional (flag' True ( long "full" <> short 'f' <> help "full format"))
+              <*> many (strArgument  ( metavar "FILTER" ))
 
     pScan = do
       opts <- pScanOpts
