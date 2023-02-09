@@ -34,7 +34,8 @@ import Prettyprinter.Render.Text
 import Safe
 import System.Directory
 import System.FilePattern.Directory
-
+import Data.UUID.V4 as UUID
+import System.Exit
 import Lens.Micro.Platform
 
 pattern Key :: forall {c}. Id -> [Syntax c] -> [Syntax c]
@@ -81,6 +82,8 @@ data FmtAttr =
   { _fmtShortId :: Int
   , _fmtTagLen  :: Int
   , _fmtTagPref :: Text
+  , _fmtPref    :: Text
+  , _fmtSuff    :: Text
   }
 
 makeLenses 'FmtAttr
@@ -98,7 +101,8 @@ instance Pretty (Format Fixme) where
       w = fmt ^. fmtTagLen
       tp = pretty $ fmt ^. fmtTagPref
 
-  pretty (Full fmt f) = pretty (view fixmeTag f)
+  pretty (Full fmt f) =   pretty (view fmtPref fmt)
+                       <> pretty (view fixmeTag f)
                        <+> pretty (view fixmeTitle f)
                        <> line
                        <> "id:" <+> pretty (fmt ^. fmtTagPref)
@@ -113,6 +117,7 @@ instance Pretty (Format Fixme) where
                        <> line
                        <> line
                        <> vcat (fmap (indent 0 . pretty) (view fixmeBody f))
+                       <> pretty (view fmtSuff fmt)
                        <> line
 
 runInit  :: IO ()
@@ -125,6 +130,11 @@ runInit = do
 
   unless confExists do
     Text.writeFile confFile defConfig
+
+runUuid :: IO ()
+runUuid = do
+  uuid <- UUID.nextRandom
+  print $ pretty "uuid:" <+> pretty (show uuid)
 
 runScan :: ScanOpt -> Maybe FilePath -> IO ()
 runScan opt fp = do
@@ -158,6 +168,15 @@ runScan opt fp = do
                          | (ListVal @C (Key "fixme-tag-prefix" [e]) ) <- r
                          ]
 
+
+  let suff  = lastDef "" [  e
+                         | (ListVal @C (Key "fixme-list-full-row-suff" [LitStrVal e]) ) <- r
+                         ]
+
+  let rpref = lastDef "" [  e
+                         | (ListVal @C (Key "fixme-list-full-row-pref" [LitStrVal e]) ) <- r
+                         ]
+
   files <- case fp of
            Nothing -> getDirectoryFilesIgnore "." masks ignore
            Just fn -> pure [fn]
@@ -166,8 +185,10 @@ runScan opt fp = do
 
   let ids = view scanFilt opt
 
-  let filt fxm = null ids || or [ Text.isPrefixOf p tid | p <- ids ]
+  let filt fxm = null ids || or [ pre p | p <- ids ]
         where tid = fromString $ show $ pretty (view fixmeId fxm)
+              tit = view fixmeTitle fxm
+              pre p = Text.isPrefixOf p tid  || Text.isPrefixOf p tit
 
   fme <- filter filt . mconcat <$> mapConcurrently (parseFile fxdef) files
 
@@ -175,9 +196,14 @@ runScan opt fp = do
 
   let fmt = if view scanFull opt == Just True then Full o else Brief o
         where
-          o = FmtAttr (fromIntegral idlen) tl tpref
+          o = FmtAttr (fromIntegral idlen) tl tpref mbPre mbSuff
+          mbPre   | view scanFull opt == Just True  = rpref
+                  | otherwise = ""
 
-  putDoc (vcat (fmap (pretty.fmt) fme))
+          mbSuff  | view scanFull opt == Just True  = suff
+                  | otherwise = ""
+
+  putDoc (vcat (fmap (pretty . fmt) fme))
 
 parseFile :: FixmeDef -> FilePath -> IO [Fixme]
 parseFile def fp = do
@@ -292,6 +318,7 @@ main = join . customExecParser (prefs showHelpOnError) $
     parser ::  O.Parser (IO ())
     parser = hsubparser (  command "init" (info pInit (progDesc "init fixme config"))
                         <> command "scan" (info pScan (progDesc "scan"))
+                        <> command "uuid" (info pUuid (progDesc "generate uuid"))
                         )
     pInit = do
       pure runInit
@@ -304,5 +331,7 @@ main = join . customExecParser (prefs showHelpOnError) $
       opts <- pScanOpts
       fp <- optional $ strArgument ( metavar "HASH" )
       pure (runScan opts fp)
+
+    pUuid = pure runUuid
 
 

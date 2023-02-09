@@ -16,5 +16,8 @@ fixme-id-show-len 10
 
 ; fixme-tag-prefix #
 
+fixme-list-full-row-pref "## "
+fixme-list-full-row-suff "\n\n;;;"
+
 
 

@@ -1,6 +1,12 @@
 
 ## 2023-02-09
 
+TODO: test-uuid
+ $(uuid ce6655b5-840c-4ddd-9916-0909ed921c48)
+
+ Рандомный uuid делает любой fixme уникальным
+
+
 TODO: fixme-uuid-command
 
   Сделать команду
