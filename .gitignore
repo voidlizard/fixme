@@ -1,3 +1,5 @@
 dist-newstyle/
 .direnv/
 bin/
+.fixme/state.db
+result

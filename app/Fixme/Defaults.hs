@@ -13,6 +13,9 @@ confFile = confDir </> "config"
 logFile :: FilePath
 logFile = confDir </> "log"
 
+stateFile :: FilePath
+stateFile = confDir </> "state.db"
+
 
 defConfig :: Text
 defConfig = [qc|

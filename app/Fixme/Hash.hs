@@ -9,13 +9,15 @@ import Data.ByteString.Char8 qualified as BS8
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString (ByteString)
 import Data.Maybe
+import Codec.Serialise
 import Prettyprinter
+import GHC.Generics
 
 type FixmeHashAlgorithm = Blake2b_256
 
 newtype FixmeHash =
   FixmeHash ByteString
-  deriving (Eq,Ord,Show)
+  deriving (Eq,Ord,Generic,Show)
 
 class HasFixmeHash a where
   fixmeHash :: a -> FixmeHash
@@ -39,4 +41,6 @@ instance HasFixmeHash LBS.ByteString where
     where
       digest = hashlazy s :: Digest FixmeHashAlgorithm
 
+
+instance Serialise FixmeHash
 
