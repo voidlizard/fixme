@@ -212,7 +212,7 @@ parseFile def fp = do
                       $ reverse
                       $ go [] (view fixmeIndent h) (fmap snd ss)
 
-    let r = h & set fixmeBody (view fixmeTitle h : lls)
+    let r = updateId $ h & set fixmeBody (view fixmeTitle h : lls)
     pure r
 
   where
