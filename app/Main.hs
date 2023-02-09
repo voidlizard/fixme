@@ -188,7 +188,7 @@ runScan opt fp = do
   let toText = Text.pack . show . pretty
 
   let merged = [ (toText a, toText b)
-               | ListVal @C (Key "fixme-merged" [SymbolVal a, SymbolVal b]) <- log
+               | ListVal @C (Key "fixme-merged" [LitStrVal a, LitStrVal b]) <- log
                ] & Trie.fromList . fmap (Text.unpack . fst)
 
   let fpat (h,f) =  or [ x ?== f | x <- masks ]

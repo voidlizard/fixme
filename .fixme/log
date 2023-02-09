@@ -1,5 +1,9 @@
-; fixme log file
 
-; fixme-merged BbjfCj H4epFBNr2i
+;; note: atom must start with non-number character.
+;; so there are must be quotes
 
-fixme-merged BbjfCj7qDD H4epFBNr2i
+
+fixme-merged "BbjfCj7qDD" "H4epFBNr2i"
+
+fixme-merged "6D8sQLF6uc" "4rCoVVC94N"
+
