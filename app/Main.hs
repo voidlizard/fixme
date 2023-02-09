@@ -188,7 +188,9 @@ runScan opt fp = do
   let filt fxm = null ids || or [ pre p | p <- ids ]
         where tid = fromString $ show $ pretty (view fixmeId fxm)
               tit = view fixmeTitle fxm
-              pre p = Text.isPrefixOf p tid  || Text.isPrefixOf p tit
+              pre p =     Text.isPrefixOf p tid
+                       || Text.isPrefixOf p tit
+                       || Text.isPrefixOf p (view fixmeTag fxm)
 
   fme <- filter filt . mconcat <$> mapConcurrently (parseFile fxdef) files
 
