@@ -129,11 +129,12 @@ runInit = do
 
   createDirectoryIfMissing True confDir
   confExists <- doesFileExist confFile
+  logExists <- doesFileExist logFile
 
   unless confExists do
     Text.writeFile confFile defConfig
 
-  unless confExists do
+  unless logExists do
     Text.writeFile logFile defLog
 
 runUuid :: IO ()
