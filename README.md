@@ -238,7 +238,8 @@ fixme list
 
 ```
 
-Right you may install fixme using nix flake: https://github.com/voidlizard/fixme/blob/master/flake.nix
+Right now you may install fixme using nix flake:
+https://github.com/voidlizard/fixme/blob/master/flake.nix
 
 Or compile it on your own. Somehow it turned out that fixme uses some (only the one, I guess)
 features from GHC 9.2
