@@ -52,18 +52,12 @@ getPager fxm (LocalConfig cfg) = do
                          | (ListVal @C (Key "fixme-pager" xs) ) <- cfg
                          ]
 
-  let remap = [ (show $ pretty a, show $ pretty b)
-              | (ListVal @C (Key "fixme-map-syntax" [SymbolVal a, SymbolVal b]) ) <- cfg
-              ]
-
-
   pure $ case pager of
     [] -> Nothing
 
     ("bat":args) -> do
-      let ext2 = lookupJustDef ext ext remap
-      let lang = if null ext2 then "" else [qc|-l {ext2}|] :: String
-      Just [qc|bat {lang} {unwords args}|]
+      let fname = [qc|--file-name {view fixmeFile fxm}|] :: String
+      Just [qc|bat {fname} {unwords args}|]
 
     xs -> Just $ unwords xs
 
