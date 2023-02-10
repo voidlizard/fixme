@@ -16,7 +16,7 @@ import Data.Config.Suckless
 import Codec.Serialise
 import Control.Concurrent.Async
 import Control.Monad
-import Data.Attoparsec.Text
+import Data.Attoparsec.Text hiding (option,take)
 import Data.Attoparsec.Text qualified as Atto
 import Data.ByteString.Lazy.Char8 qualified as LBS
 import Data.Foldable (for_)
@@ -102,6 +102,8 @@ instance Pretty (Format Fixme) where
                        <> "file:" <+> pretty (view fixmeFile f)
                                   <> colon
                                   <> pretty (view fixmeLine f)
+                                  <> colon
+                                  <> pretty (view fixmeLineEnd f)
 
                        <> line
                        <> line
@@ -324,6 +326,31 @@ runScan opt = do
     unless ( opt ^. scanDontAdd ) do
       sequence_ (mconcat merges)
 
+
+runCat :: FixmeHash -> Maybe Int -> Maybe Int -> IO ()
+runCat h mbefore mafter = do
+  e <- newFixmeEnv
+  runFixmeState e $ do
+    ii <- findId (show $ pretty h) <&> listToMaybe
+    i <- pure ii  `orDie` show ("fixme not found" <+> pretty h)
+    fxm <- getFixme i `orDie` show ("fixme not found" <+> pretty h)
+
+    let bef   = fromMaybe 0 mbefore
+    let aft   = fromMaybe 0 mafter
+    let self  = length ( fxm ^. fixmeBody )
+    let num   = bef + self + aft
+    let from  = max 0 ( fxm ^. fixmeLine - bef - 1)
+
+    -- FIXME: check of file is really big
+    --   use streaming instead of LBS(?)
+    o <- gitReadObject (view fixmeFileGitHash fxm)
+
+    let ls = take num $ drop from $ LBS.lines o
+
+    -- FIXME: use-pager-with-colors!
+    --   or temporaty file?
+    liftIO $ for_ ls LBS.putStrLn
+
 parseBlob :: FixmeDef
           -> (GitHash, FilePath)
           -> IO [Fixme]
@@ -358,7 +385,7 @@ parseBlob def (gh, fp) = do
                       $ reverse
                       $ go [] (view fixmeIndent h) (fmap snd ss)
 
-    let r = updateId $ h & set fixmeBody (view fixmeTitle h : lls)
+    let r = updateId $ h & set fixmeBody    (view fixmeTitle h : lls)
     pure r
 
   where
@@ -446,10 +473,11 @@ main = join . customExecParser (prefs showHelpOnError) $
                         <> command "scan"  (info pScan (progDesc "scan"))
                         <> command "list"  (info pList (progDesc "list"))
                         -- <> command "track" (info pScan (progDesc "track fixme"))
-                        <> command "uuid"  (info pUuid (progDesc "generate uuid"))
-                        <> command "set"   (info pSet  (progDesc "set attribute value for a fixmie"))
-                        <> command "del"   (info pDel  (progDesc "mark a fixme deleted"))
+                        <> command "uuid"  (info pUuid   (progDesc "generate uuid"))
+                        <> command "set"   (info pSet    (progDesc "set attribute value for a fixmie"))
+                        <> command "del"   (info pDel    (progDesc "mark a fixme deleted"))
                         <> command "merge" (info pMerge  (progDesc "mark a fixme merged"))
+                        <> command "cat"   (info pCat    (progDesc "cat a fixme from git object"))
                         )
     pInit = do
       pure runInit
@@ -488,4 +516,11 @@ main = join . customExecParser (prefs showHelpOnError) $
       b  <- strArgument ( metavar "TO" )
       dry <- flag False True ( long "dry" <> short 'n' <> help "dry run" )
       pure $ runLog dry [qc|fixme-merged {a} {b}|]
+
+
+    pCat = do
+      fxid  <- strArgument ( metavar "ID" )
+      b     <- optional $ option auto ( long "before" <> short 'B' <> help "lines before"  )
+      a     <- optional $ option auto ( long "after" <> short 'A' <> help "lines after"  )
+      pure $ runCat fxid b a
 

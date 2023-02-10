@@ -8,10 +8,10 @@ class OrDie m a where
   type family OrDieResult a :: Type
   orDie :: m a -> String -> m (OrDieResult a)
 
-instance OrDie IO (Maybe a) where
+instance MonadIO m => OrDie m (Maybe a) where
   type instance OrDieResult (Maybe a) = a
   orDie mv err = mv >>= \case
-      Nothing -> die err
+      Nothing -> liftIO $ die err
       Just x  -> pure x
 
 instance MonadIO m => OrDie m ExitCode where
@@ -20,9 +20,9 @@ instance MonadIO m => OrDie m ExitCode where
     ExitSuccess   -> pure ()
     ExitFailure{} -> liftIO $ die err
 
-instance OrDie IO (Either b a) where
+instance MonadIO m => OrDie m (Either b a) where
   type instance OrDieResult (Either b a) = a
   orDie mv err = mv >>= \case
-      Left{}  -> die err
+      Left{}  -> liftIO $ die err
       Right x -> pure x
 

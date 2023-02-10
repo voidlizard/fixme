@@ -6,7 +6,7 @@ import Fixme.Hash
 
 import Data.Text (Text)
 import Lens.Micro.Platform
-import GHC.Generics
+import GHC.Generics hiding (to)
 import Codec.Serialise
 
 data FixmeDef =
@@ -34,6 +34,12 @@ data Fixme =
   deriving stock (Generic,Show)
 
 makeLenses 'Fixme
+
+fixmeLineEnd :: SimpleGetter Fixme Int
+fixmeLineEnd = to f
+  where
+    f b = _fixmeLine b + length (_fixmeBody b)
+
 
 instance Serialise Fixme
 
