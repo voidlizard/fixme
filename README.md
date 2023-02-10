@@ -21,8 +21,8 @@ fixme list
 
 
 This is an utility than scans git repository for TODO/FIXME entries
-with specific format (TBD), and represents them as 'issues/tickes'
-in typical bugtarckers.
+with a specific format (TBD), and represents them as 'issues/tickes'
+in typical bug trackers.
 
 Each issue gets an id as a hash of it's contens and file
 name where it were discovered.
