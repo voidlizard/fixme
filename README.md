@@ -380,6 +380,11 @@ But operations log is played each time. It could be optimized, perhaps.
 
 Will do.
 
+### What is an actual difference between deleted and merged?
+
+Really not a big. But having merge(from,to) relation gives
+us possibility to track fixmie's history
+
 
 ### I need feature X.
 
