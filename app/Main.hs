@@ -328,18 +328,21 @@ runScan opt = do
 runCat :: FixmeHash -> Maybe Int -> Maybe Int -> IO ()
 runCat h mbefore mafter = do
   e <- newFixmeEnv
+
+  cfg <- getLocalConfig
+  ctx <- getDefaultContext cfg
+
   runFixmeState e $ do
     ii <- findId (show $ pretty h) <&> listToMaybe
     i <- pure ii  `orDie` show ("fixme not found" <+> pretty h)
     fxm <- getFixme i `orDie` show ("fixme not found" <+> pretty h)
 
-    let bef   = fromMaybe 0 mbefore
-    let aft   = fromMaybe 0 mafter
+    let bef   = fromMaybe 0 (mbefore <|> fmap fst ctx)
+    let aft   = fromMaybe 0 (mafter  <|> fmap snd ctx)
     let self  = length ( fxm ^. fixmeBody )
     let num   = bef + self + aft
     let from  = max 0 ( fxm ^. fixmeLine - bef - 1)
 
-    cfg   <- getLocalConfig
     pager <- getPager fxm cfg
 
     -- FIXME: check of file is really big

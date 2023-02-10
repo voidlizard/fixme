@@ -61,3 +61,10 @@ getPager fxm (LocalConfig cfg) = do
 
     xs -> Just $ unwords xs
 
+getDefaultContext :: MonadIO m => LocalConfig -> m (Maybe (Int, Int))
+getDefaultContext (LocalConfig cfg) = do
+  pure $
+   lastMay  [ (fromIntegral a, fromIntegral b)
+            | (ListVal @C (Key "fixme-def-context" [LitIntVal a, LitIntVal b]) ) <- cfg
+            ]
+
