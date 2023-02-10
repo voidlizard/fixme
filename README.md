@@ -230,7 +230,7 @@ echo .fixme/state.db >> .gitignore
 git commit -a m 'added fixme'
 
 fixme scan
-git list
+fixme list
 
 ```
 
