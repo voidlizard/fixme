@@ -189,6 +189,7 @@ runLog dry s = withState do
   unless dry do
     appendFile logFile "\n"
     appendFile logFile s
+    appendFile logFile "\n"
 
 runList :: ListOpts -> IO ()
 runList opt = do
