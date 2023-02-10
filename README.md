@@ -30,7 +30,7 @@ their state or do something usefull with them?
 
 All operations over fixmies are done via the log.
 
-This log is located in .fixme/log directory and it
+This log is located in .fixme/log file and it
 replays each time when 'fixme scan' is called.
 
 It might be slow at some point, and it may be and will
