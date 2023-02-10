@@ -250,6 +250,13 @@ little bit outdated, so I let it this way so far.
 If you want to try fixme and it's an obstacle --- let me know.  If you are NIX user, probably
 you will install fixme with ease. If you are not... Oops.
 
+### How do I see the full issue text?
+
+```
+fixme-files list -f  <search-string>
+```
+
+For now, it will show all issues that match the search-string
 
 ### How do I create an issue?
 
