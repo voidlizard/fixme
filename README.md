@@ -93,14 +93,15 @@ Therefore, there are two streams:
 And the state is calculated as an application of operations from
 stream "B" over entities from stream "A".
 
-Thies log is stored only locally and it's not shared across
+Physically the state is an sqlite database .fixme/state.db
+
+This state is stored only locally and it's not shared across
 the git repository.
 
 The .fixme/config and .fixme/log are shared. So,
 all participants should have same fixmies attributes
 and states as far as they have the same log.
 
-Physically the state is an sqlite database .fixme/state.db
 
 It works as a cache. It might be deleted, it will be re-created next
 time 'fixme scan' will be running.
