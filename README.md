@@ -4,7 +4,7 @@
 Git-oriented trackerless distributed issue tracker.
 Yes, an another one.
 
-![fixme.png](doc/img/fixme.png "fixme")
+![fixme.png](doc/img/fixme.png|width=320)
 
 ## TL;DR
 
