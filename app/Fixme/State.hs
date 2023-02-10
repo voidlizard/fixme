@@ -6,6 +6,7 @@ import Fixme.Git
 import Fixme.Types
 import Fixme.Hash
 import Fixme.Defaults
+import Fixme.Prelude
 
 import Codec.Serialise
 import Control.Monad.Reader
@@ -91,6 +92,13 @@ initState = do
                                 , primary key (id,attr) );
                      |]
 
+    execute_ conn [qc|create table if not exists
+                      fixmeattrlog ( rev text not null
+                                   , id text not null references fixme(id)
+                                   , attr text not null
+                                   , value text
+                                   , primary key (rev,id,attr) );
+                     |]
 
 transaction :: forall m a . MonadIO m => FixmeState IO a -> FixmeState m a
 transaction m = do
@@ -168,12 +176,26 @@ addMerged a b = do
   liftIO $ execute  conn sql (a,b)
 
 
-setAttr ::  MonadIO m  => Pretty a => FixmeHash -> Text -> a -> FixmeState m ()
-setAttr h t v = do
+setAttr ::  MonadIO m  => Pretty a => Maybe GitHash -> FixmeHash -> Text -> a -> FixmeState m ()
+setAttr gh' h t v = do
   conn <- asks (view fixmeEnvDb)
   liftIO $ execute conn [qc| insert into fixmeattr (id,attr,value)
                              values (?,?,?) on conflict (id,attr) do update set value = ?
                            |] ( show (pretty h), t, show (pretty v), show (pretty v))
+
+
+  maybe1 gh' (pure ()) $ \gh -> do
+
+    liftIO $ execute conn [qc| insert into fixmeattrlog (rev,id,attr,value)
+                               values (?,?,?,?) on conflict (id,attr) do update set value = ?
+                             |] ( show (pretty gh)
+                                , show (pretty h)
+                                , t
+                                , show (pretty v)
+                                , show (pretty v)
+                                )
+
+    pure ()
 
 putFixme :: MonadIO m => Fixme -> FixmeState m ()
 putFixme fxm = do
@@ -193,9 +215,8 @@ putFixme fxm = do
 
     liftIO $ execute conn sql (i,bs)
 
-    setAttr (fxm ^. fixmeId) "tag"   (fxm ^. fixmeTag)
-    setAttr (fxm ^. fixmeId) "title" (fxm ^. fixmeTitle)
-
+    setAttr Nothing (fxm ^. fixmeId) "tag"   (fxm ^. fixmeTag)
+    setAttr Nothing (fxm ^. fixmeId) "title" (fxm ^. fixmeTitle)
 
 listFixme :: MonadIO m => FixmeState m [FixmeHash]
 listFixme = do
