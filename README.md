@@ -202,7 +202,7 @@ Note, that fixmie ends when:
   1. The indentation of the following line is lesser,
      than in this fixmie
 
-All of thouse are WIP, and little bit buzzy.
+All of thouse are WIP, and little bit fuzzy.
 
 
 ## Known bugs
