@@ -449,6 +449,7 @@ main = join . customExecParser (prefs showHelpOnError) $
                         <> command "uuid"  (info pUuid (progDesc "generate uuid"))
                         <> command "set"   (info pSet  (progDesc "set attribute value for a fixmie"))
                         <> command "del"   (info pDel  (progDesc "mark a fixme deleted"))
+                        <> command "merge" (info pMerge  (progDesc "mark a fixme merged"))
                         )
     pInit = do
       pure runInit
@@ -482,4 +483,9 @@ main = join . customExecParser (prefs showHelpOnError) $
       dry <- flag False True ( long "dry" <> short 'n' <> help "dry run" )
       pure $ runLog dry [qc|fixme-del {fx}|]
 
+    pMerge = do
+      a  <- strArgument ( metavar "FROM" )
+      b  <- strArgument ( metavar "TO" )
+      dry <- flag False True ( long "dry" <> short 'n' <> help "dry run" )
+      pure $ runLog dry [qc|fixme-merged {a} {b}|]
 
