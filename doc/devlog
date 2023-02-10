@@ -1,6 +1,18 @@
 
 ## 2023-02-10
 
+TODO: fixme-authors-command
+  Implement a command that will show all authors
+  from all commits from the repo.
+
+  Should not process commits twice.
+
+  1. List all commits
+  2. Parse authors
+  3. Save authors to a specific table
+  4. Save the commit hash
+
+
 TODO: merge-to-null-to-hide-fixmie
 
 TODO: inverted-filters
