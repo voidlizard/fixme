@@ -397,6 +397,25 @@ Will do.
 Really not a big. But having merge(from,to) relation gives
 us possibility to track fixmie's history
 
+### How to see original code where fixme was taken?
+
+```
+fixme cat <fixme-id>
+```
+
+It supports external pager, that may be configured in
+local config file
+
+```
+
+cat ~/.config/fixme/config
+
+fixme-pager bat
+
+fixme-map-syntax qqq txt
+ ;; to fix situation if pager does not know that file type
+
+```
 
 ### I need feature X.
 

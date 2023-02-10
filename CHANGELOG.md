@@ -1,5 +1,29 @@
-# Revision history for fixme
+##  2023-02-10
 
-## 0.1.0.0 -- YYYY-mm-dd
+```
+fixme cat <id>
+```
 
-* First version. Released on an unsuspecting world.
+Outputs fixme from git blob where it were taken.
+Supports -A and -B keys to show context after and before.
+
+Supports pager, like bat, for an instance. To show the fixmies
+with nice syntax highlithing.
+
+```
+
+cat ~/.config/fixme/config
+
+fixme-pager bat
+
+fixme-map-syntax qqq txt
+
+```
+
+fixme-map-syntax replaces and extension to someone,
+that pager knows and able to handle.
+
+Right now it's supported only for "bat".
+
+
+

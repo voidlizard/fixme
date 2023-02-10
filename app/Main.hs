@@ -355,7 +355,8 @@ runCat h mbefore mafter = do
         -- print $ pretty pgr
         -- exitFailure
         let input = byteStringInput (LBS.unlines ls)
-        let cmd = setStdin input $ shell [qc|{pgr}|]
+        let cmd = setStdin input $ setStderr closed
+                                 $ shell [qc|{pgr}|]
         code <- runProcess cmd
 
         unless ( code == ExitSuccess ) do
