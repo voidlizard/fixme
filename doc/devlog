@@ -1,6 +1,12 @@
 
 ## 2023-02-10
 
+TODO: attribute-value-limitations-to-config
+
+  Возможно задавать ограничения на названия атрибутов
+  и их значения. #easy
+
+
 TODO: default-context-for-cat
 
   ```
