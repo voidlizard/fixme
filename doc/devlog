@@ -1,6 +1,9 @@
 
 ## 2023-02-10
 
+TODO: set-attribute-from-context
+  like commit-time, commit-date and so on.
+
 TODO: set-attribute-from-issue-itself
 
   Парсить тело fixme, доставать оттуда атрибуты
