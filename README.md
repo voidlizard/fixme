@@ -86,7 +86,7 @@ fixme-del "7AGbMzAHza" ;; puts fixme #7AGbMzAHza into a "deleted" table. so it
 Therefore, there are two streams:
 
   1. A: Streams of "fixmies" from the all blobs from
-     the repository from the veriy beginning;
+     the repository from the very beginning;
 
   2. B: Stream of the fixmies state updates.
 
