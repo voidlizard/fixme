@@ -1,5 +1,8 @@
 
-# fixme. Git-oriented trackerless issue tracker
+# fixme
+
+Git-oriented trackerless distributed issue tracker.
+Yes, an another one.
 
 ## TL;DR
 
