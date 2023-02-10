@@ -5,7 +5,7 @@ This is an utility than scans git repository for TODO/FIXME entries
 with specific format (TBD), and represents them as 'issues/tickes'
 in typical bugtarckers.
 
-Each issue gets and id as a hash of it's contens and file
+Each issue gets an id as a hash of it's contens and file
 name where it were discovered.
 
 Example:
