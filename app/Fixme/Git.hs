@@ -43,7 +43,6 @@ instance HasGitHash (GitBlob LBS.ByteString) where
       digest = hashlazy (hd <> s) :: Digest SHA1
 
 
-
 -- FIXME: check-return-code
 --   (uuid e0aed358-6757-4054-803c-3cd8066fd7cd)
 --

@@ -13,15 +13,14 @@ import Fixme.Prelude
 
 import Data.Config.Suckless
 
-import Data.Foldable (for_)
-import Data.Traversable
-import Data.Function
 import Codec.Serialise
 import Control.Concurrent.Async
 import Control.Monad
 import Data.Attoparsec.Text
 import Data.Attoparsec.Text qualified as Atto
 import Data.ByteString.Lazy.Char8 qualified as LBS
+import Data.Foldable (for_)
+import Data.Function
 import Data.Generics.Uniplate.Data()
 import Data.IntMap qualified as IntMap
 import Data.List qualified as List
@@ -32,17 +31,19 @@ import Data.Text.Encoding.Error (ignore)
 import Data.Text.IO qualified as Text
 import Data.Text qualified as Text
 import Data.Text (Text)
+import Data.Traversable
+import Data.UUID.V4 as UUID
+import Lens.Micro.Platform
 import Options.Applicative hiding (Parser)
 import Options.Applicative qualified as O
 import Prettyprinter
 -- import Prettyprinter.Render.Text
 import Safe
 import System.Directory
-import Data.UUID.V4 as UUID
-import Lens.Micro.Platform
-import System.FilePattern
 import System.Exit
+import System.FilePattern
 import System.IO
+import Text.InterpolatedString.Perl6 (qc)
 
 pattern Key :: forall {c}. Id -> [Syntax c] -> [Syntax c]
 pattern Key n ns <- SymbolVal  n : ns
@@ -181,6 +182,14 @@ runUuid = do
   uuid <- UUID.nextRandom
   print $ pretty "uuid:" <+> pretty (show uuid)
 
+
+runSet :: Bool -> String -> IO ()
+runSet dry s = do
+  print (pretty s)
+  unless dry do
+    appendFile logFile "\n"
+    appendFile logFile s
+
 runList :: ListOpts -> IO ()
 runList opt = do
   e <- newFixmeEnv
@@ -229,6 +238,10 @@ runScan opt = do
                  | ListVal @C (Key "fixme-merged" [LitStrVal a, LitStrVal b]) <- log
                  ]
 
+    let attrs = [ (show $ pretty i, a, v)
+                | ListVal @C (Key "fixme-set" [LitStrVal a, LitStrVal v, LitStrVal i]) <- log
+                ]
+
     let fpat (_,f) =  or [ x ?== f | x <- masks r ]
                    && not (and [ x ?== f | x <- ignored r] )
 
@@ -254,7 +267,27 @@ runScan opt = do
           liftIO $ print $ pretty (Brief o f)
           putFixme f
 
+
+    -- FIXME: play only diff for log ?
+
+    -- FIXME: don't play log twice(?)
+
     -- FIXME: to-play-log-function
+
+    unless ( opt ^. scanDontAdd ) do
+      forM_ attrs $ \(i,a,v) -> do
+        ii <- findId i
+
+        run <- case ii of
+                  [x] -> pure [ setAttr Nothing x a v ]
+                  _   -> do
+                    liftIO $ hPrint stderr $ "fixme-set:"
+                                                <+> pretty ii
+                                                <+> "is ambigous, ignored"
+                    pure mempty
+
+        sequence_ run
+
     merges <- forM merged $ \(a,b) -> do
                 aId <- findId a
                 bId <- findId b
@@ -270,59 +303,6 @@ runScan opt = do
 
     unless ( opt ^. scanDontAdd ) do
       sequence_ (mconcat merges)
-
-    -- blobs <-  forM blobz $ \(h,f) -> do
-    --             here <- blobProcessed h
-    --             liftIO $ print $ pretty (h, here)
-    --             pure (h,f)
-
-    -- let files = blobs & reverse . filter fpat
-
-    -- let fxdef = FixmeDef (List.nub (comm r))  (List.nub ("FIXME:" : pref r))
-
-    -- let ids = view scanFilt opt
-
-    -- -- FIXME: filt-might-be-very-slow
-    -- let filt fxm = notMerged && null ids || or [ pre p | p <- ids ]
-    --       where
-    --         tid = fromString $ show $ pretty (view fixmeId fxm)
-    --         tit = view fixmeTitle fxm
-    --         pre p =    Text.isPrefixOf p tid
-    --                      || Text.isPrefixOf p tit
-    --                      || Text.isPrefixOf p (view fixmeTag fxm)
-
-    --         notMerged = Trie.null $ Trie.intersection merged prefAll
-
-    --         prefAll = Trie.fromList [ x :: String
-    --                                 | x <- prefAllL, length x >= 6
-    --                                 ]
-
-    --         prefAllL = Trie.toList $ Trie.prefixes (Trie.fromList [Text.unpack tid])
-
-    -- fme <- liftIO $ List.nubBy ((==) `on` view fixmeId) . filter filt . mconcat
-    --           <$> mapConcurrently (parseBlob fxdef) files
-
-
-    -- liftIO $ for_ fme $ \f -> print $ pretty (view fixmeFileGitHash f)
-
-    -- let tl = maximumDef 6 $ fmap Text.length (pref r)
-
-    -- let fmt = if view scanFull opt == Just True then Full o else Brief o
-    --       where
-    --         o = FmtAttr (fromIntegral (idlen r) ) tl (tpref r) mbPre mbSuff
-    --         mbPre   | view scanFull opt == Just True  = rpref r
-    --                 | otherwise = ""
-
-    --         mbSuff  | view scanFull opt == Just True  = suff r
-    --                 | otherwise = ""
-
-    -- when ( opt ^. scanDoAdd ) do
-    --     for_ fme $ \f -> do
-    --       putFixme f
-    --       setProcessed ( f ^. fixmeFileGitHash )
-
-    -- liftIO $ putDoc (vcat (fmap (pretty . fmt) fme))
-
 
 parseBlob :: FixmeDef
           -> (GitHash, FilePath)
@@ -447,6 +427,7 @@ main = join . customExecParser (prefs showHelpOnError) $
                         <> command "list"  (info pList (progDesc "list"))
                         -- <> command "track" (info pScan (progDesc "track fixme"))
                         <> command "uuid"  (info pUuid (progDesc "generate uuid"))
+                        <> command "set"   (info pSet  (progDesc "set attribute value for a fixmie"))
                         )
     pInit = do
       pure runInit
@@ -464,4 +445,14 @@ main = join . customExecParser (prefs showHelpOnError) $
       pure $ ListOpt full filt
 
     pList = withState . runList <$> pListOpts
+
+    pSetOpts = do
+      attr <- strArgument ( metavar "ATTRIBUTE" )
+      val  <- strArgument ( metavar "VALUE")
+      fx  <- strArgument ( metavar "ID" )
+      dry <- flag False True ( long "dry" <> short 'n' <> help "dry run" )
+      pure (dry, [qc|fixme-set {attr} {val} {fx}|])
+
+    pSet = do
+      withState . uncurry runSet <$> pSetOpts
 
