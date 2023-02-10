@@ -6,6 +6,8 @@ fixme-comments   // # --
 fixme-prefix     FIXME:   bugs issues
 fixme-prefix     TODO:    bugs issues
 
+fixme-files README.md
+
 fixme-files **/*.hs
 
 fixme-files doc/devlog

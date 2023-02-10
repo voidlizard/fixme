@@ -1,6 +1,22 @@
 
 # fixme. Git-oriented trackerless issue tracker
 
+## TL;DR
+
+```
+fixme init
+
+vim .fixme/config
+
+fixme scan
+
+fixme list
+
+
+
+```
+
+
 This is an utility than scans git repository for TODO/FIXME entries
 with specific format (TBD), and represents them as 'issues/tickes'
 in typical bugtarckers.
@@ -69,27 +85,34 @@ fixme-del "7AGbMzAHza" ;; puts fixme #7AGbMzAHza into a "deleted" table. so it
 
 Therefore, there are two streams:
 
-  1. A: Streams of "fixmies" from all from the repository
-     from the veriy beginning
+  1. A: Streams of "fixmies" from the all blobs from
+     the repository from the veriy beginning;
 
   2. B: Stream of the fixmies state updates.
 
+And the state is calculated as an application of operations from
+stream "B" over entities from stream "A".
 
-There is also a local state kept in sqlite database .fixme/state.db
+Thies log is stored only locally and it's not shared across
+the git repository.
 
-It works as a cache. It might be deleted, it will be re-created
-next time 'fixme scan' will be running.
+The .fixme/config and .fixme/log are shared. So,
+all participants should have same fixmies attributes
+and states as far as they have the same log.
+
+Physically the state is an sqlite database .fixme/state.db
+
+It works as a cache. It might be deleted, it will be re-created next
+time 'fixme scan' will be running.
 
 
-What if some fixmies
-got a similar id?  They will be displayed all.
+What if some fixmies got a similar id?  They will be displayed all.
 
-It should be ignored by 'fixme scan' process,
-so it should not (supposedly) processed.
+It should be ignored by 'fixme scan' process, so it should not
+(supposedly) processed.
 
-It you really need a duplicated fixme, make it unique
-by adding something unique into it's description.
-
+It you really need a duplicated fixme, make it unique by adding
+something unique into it's description.
 
 If you got two identical fixmies with different ids,
 you may
@@ -221,6 +244,89 @@ little bit outdated, so I let it this way so far.
 
 If you want to try fixme and it's an obstacle --- let me know.  If you are NIX user, probably
 you will install fixme with ease. If you are not... Oops.
+
+
+### How do I create an issue?
+
+
+Make sure that .fixme/config contains like
+
+```
+fixme-files **/*.hs
+```
+
+option to tell fixme what files to scan.
+
+Make sure it also has
+
+```
+fixme-comments   // # --
+```
+
+section and it has comment prefixes for you  language.
+If you want to use ';' characters in comments, use double quotes ";".
+
+also make sure it has something like
+
+```
+fixme-prefix     FIXME:   bugs issues
+```
+
+Create a FIXME: entry somewhere in project. Example:
+
+```
+ // FIXME: write-something-useful   <- This is a FIXME comment
+ //   Really, do it.
+                                    <- Here is the end of a fixmie.
+int main() {
+  return -1;
+}
+
+```
+
+### How do I list my fixmies?
+
+```
+fixme list
+
+fixme list TODO FIXME  write-so
+
+```
+It will search thouse as prefixes over all attributes.
+More sofisticated behaviour is in process.
+
+
+### How do I assign a fixmie to someone?
+
+```
+fixme set assigned Alice 9FcnrRf8s
+```
+
+It will just set a text attribute 'assigned' to value 'Alice'. How to
+check it out?
+
+```
+fixme scan
+fixme list Alice
+```
+
+will displays all fixmies that has any attribute that has value
+started from 'Alice'
+
+How to filter by attribute exactly 'assigned' == exactly 'Alice' ?
+
+Yeah, it must be implemented. WIP.
+
+FIXME: implement-exact-atribute-matching-in-queries
+  Yep. Really needed.
+
+
+### How to display all attributes set for a fixme?
+
+Should be done as well.
+
+FIXME: gather-all-attributes-on-fixme-load
+  Indeed
 
 ### There are many attempts of making "distributed" and "git-oriented" bugs. Why another one?
 
