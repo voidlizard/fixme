@@ -1,13 +1,21 @@
 {-# Language TemplateHaskell #-}
+{-# Language PatternSynonyms #-}
 module Fixme.Types where
 
 import Fixme.Git
 import Fixme.Hash
+import Data.Config.Suckless
 
 import Data.Text (Text)
 import Lens.Micro.Platform
 import GHC.Generics hiding (to)
 import Codec.Serialise
+
+type C = MegaParsec
+
+pattern Key :: forall {c}. Id -> [Syntax c] -> [Syntax c]
+pattern Key n ns <- SymbolVal  n : ns
+
 
 data FixmeDef =
   FixmeDef

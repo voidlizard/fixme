@@ -1,19 +1,28 @@
+{-# Language PatternSynonyms #-}
 module Fixme.LocalConfig where
 
 import Data.Config.Suckless
+import Fixme.Prelude
 import Fixme.OrDie
+import Fixme.Types
 
+import Text.InterpolatedString.Perl6 (qc)
 import Data.Functor
 import System.FilePath
 import System.Directory
 import Prettyprinter
+import Lens.Micro.Platform
+import Safe
 
-getLocalConfig :: IO [Syntax MegaParsec]
-getLocalConfig = do
+newtype LocalConfig = LocalConfig [Syntax C]
+                      deriving newtype (Monoid, Semigroup)
+
+getLocalConfig :: MonadIO m => m LocalConfig
+getLocalConfig = liftIO do
 
   let cfg = "config"
 
-  xdg <- getXdgDirectory XdgData "fixme"
+  xdg <- getXdgDirectory XdgConfig "fixme"
 
   let localConf = xdg </> cfg
 
@@ -25,10 +34,29 @@ getLocalConfig = do
     pure mempty
 
   else do
-    conf <- pure (parseTop localConf)
+    file <- readFile localConf
+    conf <- pure (parseTop file)
       `orDie` show ( "can't parse config" <+> pretty localConf )
 
-    pure mempty
+    pure (LocalConfig conf)
 
 
+getPager :: MonadIO m => Fixme -> LocalConfig -> m (Maybe String)
+getPager fxm (LocalConfig cfg) = do
+  -- liftIO $ print $ pretty cfg
+
+  let ext = dropWhile (== '.') $ takeExtension (fxm ^. fixmeFile)
+
+  let pager = lastDef [] [  [ show (pretty s) |  s <- xs ]
+                         | (ListVal @C (Key "fixme-pager" xs) ) <- cfg
+                         ]
+
+  pure $ case pager of
+    [] -> Nothing
+
+    ("bat":args) -> do
+      let lang = if null ext then "" else [qc|-l {ext}|] :: String
+      Just [qc|bat {lang} {unwords args}|]
+
+    xs -> Just $ unwords xs
 

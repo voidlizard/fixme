@@ -10,6 +10,7 @@ import Fixme.Hash
 import Fixme.State
 import Fixme.Types
 import Fixme.Prelude
+import Fixme.LocalConfig
 
 import Data.Config.Suckless
 
@@ -31,24 +32,18 @@ import Data.Text.Encoding.Error (ignore)
 import Data.Text.IO qualified as Text
 import Data.Text qualified as Text
 import Data.Text (Text)
-import Data.Traversable
 import Data.UUID.V4 as UUID
 import Lens.Micro.Platform
 import Options.Applicative hiding (Parser)
 import Options.Applicative qualified as O
 import Prettyprinter
--- import Prettyprinter.Render.Text
 import Safe
 import System.Directory
 import System.Exit
 import System.FilePattern
 import System.IO
+import System.Process.Typed
 import Text.InterpolatedString.Perl6 (qc)
-
-pattern Key :: forall {c}. Id -> [Syntax c] -> [Syntax c]
-pattern Key n ns <- SymbolVal  n : ns
-
-type C = MegaParsec
 
 
 newtype ScanOpt =
@@ -344,6 +339,9 @@ runCat h mbefore mafter = do
     let num   = bef + self + aft
     let from  = max 0 ( fxm ^. fixmeLine - bef - 1)
 
+    cfg   <- getLocalConfig
+    pager <- getPager fxm cfg
+
     -- FIXME: check of file is really big
     --   use streaming instead of LBS(?)
     o <- gitReadObject (view fixmeFileGitHash fxm)
@@ -352,7 +350,16 @@ runCat h mbefore mafter = do
 
     -- FIXME: use-pager-with-colors!
     --   or temporaty file?
-    liftIO $ for_ ls LBS.putStrLn
+    maybe1 pager (liftIO $ for_ ls LBS.putStrLn)
+     \pgr -> liftIO do
+        -- print $ pretty pgr
+        -- exitFailure
+        let input = byteStringInput (LBS.unlines ls)
+        let cmd = setStdin input $ shell [qc|{pgr}|]
+        code <- runProcess cmd
+
+        unless ( code == ExitSuccess ) do
+          liftIO $ for_ ls LBS.putStrLn
 
 parseBlob :: FixmeDef
           -> (GitHash, FilePath)
