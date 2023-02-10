@@ -183,8 +183,8 @@ runUuid = do
   print $ pretty "uuid:" <+> pretty (show uuid)
 
 
-runSet :: Bool -> String -> IO ()
-runSet dry s = do
+runLog :: Bool -> String -> IO ()
+runLog dry s = withState do
   print (pretty s)
   unless dry do
     appendFile logFile "\n"
@@ -238,6 +238,10 @@ runScan opt = do
                  | ListVal @C (Key "fixme-merged" [LitStrVal a, LitStrVal b]) <- log
                  ]
 
+    let deleted = [ Text.unpack a
+                  | ListVal @C (Key "fixme-del" [LitStrVal a]) <- log
+                  ]
+
     let attrs = [ (show $ pretty i, a, v)
                 | ListVal @C (Key "fixme-set" [LitStrVal a, LitStrVal v, LitStrVal i]) <- log
                 ]
@@ -267,26 +271,40 @@ runScan opt = do
           liftIO $ print $ pretty (Brief o f)
           putFixme f
 
-
     -- FIXME: play only diff for log ?
 
     -- FIXME: don't play log twice(?)
 
     -- FIXME: to-play-log-function
 
-    unless ( opt ^. scanDontAdd ) do
-      forM_ attrs $ \(i,a,v) -> do
+      run <- forM attrs $ \(i,a,v) -> do
         ii <- findId i
 
-        run <- case ii of
-                  [x] -> pure [ setAttr Nothing x a v ]
-                  _   -> do
-                    liftIO $ hPrint stderr $ "fixme-set:"
-                                                <+> pretty ii
-                                                <+> "is ambigous, ignored"
-                    pure mempty
+        case ii of
+           [x] -> pure [ setAttr Nothing x a v ]
+           _   -> do
+             liftIO $ hPrint stderr $ "fixme-set:"
+                                         <+> pretty ii
+                                         <+> "is ambigous, ignored"
+             pure mempty
 
-        sequence_ run
+      unless ( opt ^. scanDontAdd ) do
+        sequence_ (mconcat run)
+
+
+      del <- forM deleted $ \i -> do
+        ii <- findId i
+
+        case ii of
+           [x] -> pure [ setDeleted x ]
+           _   -> do
+             liftIO $ hPrint stderr $ "fixme-del:"
+                                         <+> pretty ii
+                                         <+> "is ambigous, ignored"
+             pure mempty
+
+      unless ( opt ^. scanDontAdd ) do
+        sequence_ (mconcat del)
 
     merges <- forM merged $ \(a,b) -> do
                 aId <- findId a
@@ -428,6 +446,7 @@ main = join . customExecParser (prefs showHelpOnError) $
                         -- <> command "track" (info pScan (progDesc "track fixme"))
                         <> command "uuid"  (info pUuid (progDesc "generate uuid"))
                         <> command "set"   (info pSet  (progDesc "set attribute value for a fixmie"))
+                        <> command "del"   (info pDel  (progDesc "mark a fixme deleted"))
                         )
     pInit = do
       pure runInit
@@ -454,5 +473,11 @@ main = join . customExecParser (prefs showHelpOnError) $
       pure (dry, [qc|fixme-set {attr} {val} {fx}|])
 
     pSet = do
-      withState . uncurry runSet <$> pSetOpts
+      uncurry runLog <$> pSetOpts
+
+    pDel = do
+      fx  <- strArgument ( metavar "ID" )
+      dry <- flag False True ( long "dry" <> short 'n' <> help "dry run" )
+      pure $ runLog dry [qc|fixme-del {fx}|]
+
 

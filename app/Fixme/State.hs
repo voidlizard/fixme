@@ -85,6 +85,12 @@ initState = do
                               )
                      |]
 
+    execute_ conn [qc| create table if not exists
+                       deleted ( id text not null
+                               , primary key (id)
+                               )
+                     |]
+
     execute_ conn [qc|create table if not exists
                       fixmeattr ( id text not null references fixme(id)
                                 , attr text not null
@@ -175,6 +181,16 @@ addMerged a b = do
 
   liftIO $ execute  conn sql (a,b)
 
+setDeleted :: MonadIO m => FixmeHash -> FixmeState m ()
+setDeleted fid = do
+  conn <- asks (view fixmeEnvDb)
+
+  let sql = [qc|
+  insert into deleted (id) values (?) on conflict (id) do nothing
+  |]
+
+  liftIO $ execute  conn sql (Only fid)
+
 
 setAttr ::  MonadIO m  => Pretty a => Maybe GitHash -> FixmeHash -> Text -> a -> FixmeState m ()
 setAttr gh' h t v = do
@@ -258,8 +274,10 @@ loadFixme cnd'' = do
   let sql = [qc|
    with vals(v) as (values {vals})
    select fixme from fixme f
-   where not exists (select null from merged m where m.a = f.id)
-     and  (
+   where
+      not exists (select null from merged m where m.a = f.id)
+      and not exists (select null from deleted d where d.id = f.id)
+      and  (
         exists ( select null from fixmeattr a
                  where a.id = f.id
                    and (
