@@ -1,6 +1,12 @@
 
 ## 2023-02-10
 
+
+TODO: dont-show-already-existed-fixmies-in-scan
+
+  Не показывать fixme в scan, если они уже есть в кэше
+  #easy
+
 TODO: define-how-to-process-log
 
   Что бы писать в fixmeattrlog что-то релевантное (хэш самого файла? хэш коммита?)
