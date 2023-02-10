@@ -4,7 +4,7 @@
 fixme cat <id>
 ```
 
-Outputs fixme from git blob where it were taken.
+Outputs fixme from git blob where it was taken.
 Supports -A and -B keys to show context after and before.
 
 Supports pager, like bat, for an instance. To show the fixmies
