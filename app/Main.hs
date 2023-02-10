@@ -261,6 +261,7 @@ runScan opt = do
               <$> mapConcurrently (parseBlob fxdef) files
 
     -- FIXME: remove-tag-len-hardcode-somehow
+
     let o = FmtAttr (fromIntegral (idlen r) ) 8 (tpref r) "" ""
 
     unless ( opt ^. scanDontAdd ) do
