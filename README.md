@@ -370,8 +370,7 @@ docs generation and lightweight code review.
 Will see.
 
 
-
-### Is't scanning all blobs in repo and playing all the operation log each time slow?
+### Isn't scanning all blobs in repo and playing all the operation log each time slow?
 
 Probably, it is.
 
