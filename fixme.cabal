@@ -68,6 +68,7 @@ executable fixme
       Fixme.State
       Fixme.Prelude
       Fixme.Types
+      Fixme.LocalConfig
 
     -- other-extensions:
     build-depends:   base

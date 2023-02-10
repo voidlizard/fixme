@@ -286,6 +286,7 @@ runScan opt = do
 
         case ii of
            [x] -> pure [ setAttr Nothing x a v ]
+           []  -> pure [ setAttr Nothing (fromString i) a v ]
            _   -> do
              liftIO $ hPrint stderr $ "fixme-set:"
                                          <+> pretty ii
@@ -301,9 +302,10 @@ runScan opt = do
 
         case ii of
            [x] -> pure [ setDeleted x ]
+           []  -> pure [ setDeleted (fromString i) ]
            _   -> do
              liftIO $ hPrint stderr $ "fixme-del:"
-                                         <+> pretty ii
+                                         <+> pretty i
                                          <+> "is ambigous, ignored"
              pure mempty
 
@@ -316,6 +318,7 @@ runScan opt = do
 
                 case (aId, bId) of
                   ( [x], [y] ) -> pure [addMerged x y]
+                  ( [], [] )   -> pure [addMerged (fromString a) (fromString b)]
                   _ -> do
                     liftIO $ hPrint stderr $ "fixme-merge"
                                                 <+> pretty a
