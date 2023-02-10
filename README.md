@@ -160,7 +160,7 @@ fixme-files-ignore .direnv/** dist-newstyle/**
 ;; yes, direnv and dist-newstyle are not in git typically
 
 ;; How many characters of hash to show?
-;; Fixme id is a 32-bytes cryptograpic hash from
+;; Fixme id is a 32-bytes cryptographic hash from
 ;; it's content and some context.
 ;; But it's big and inconvenient. So it's possible
 ;; to display and use only part of it.
