@@ -260,7 +260,7 @@ runScan opt = do
     fme <- liftIO $ List.nubBy ((==) `on` view fixmeId) . mconcat
               <$> mapConcurrently (parseBlob fxdef) files
 
-    -- FIXME: remove-tag-len-hardcode-somehow
+    -- FIXME: remove-tag-len-hardcode-somehow-new
 
     let o = FmtAttr (fromIntegral (idlen r) ) 8 (tpref r) "" ""
 
