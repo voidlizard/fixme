@@ -367,7 +367,7 @@ It makes a lot of sense to keep issues along with code.
 fixme scans files for a specific comments, remembers
 and tracks them with the context.
 
-It's oriented on git hashes and blobs, not file names.
+It's oriented to git hashes and blobs, not file names.
 
 It opens a lot of opportunities, like CHANGELOG and other
 docs generation and lightweight code review.
