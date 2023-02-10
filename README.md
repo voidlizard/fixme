@@ -296,7 +296,7 @@ It will search thouse as prefixes over all attributes.
 More sofisticated behaviour is in process.
 
 
-### How do I assign a fixmie to someone?
+### How do I assign a fixmie to a someone?
 
 ```
 fixme set assigned Alice 9FcnrRf8s
