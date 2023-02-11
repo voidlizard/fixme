@@ -20,7 +20,7 @@ fixme list
 ```
 
 
-This is an utility than scans git repository for TODO/FIXME entries
+This is an utility that scans git repository for TODO/FIXME entries
 with a specific format (TBD), and represents them as 'issues/tickes'
 in typical bug trackers.
 
@@ -53,11 +53,11 @@ This log is located in .fixme/log file and it
 replays each time when 'fixme scan' is called.
 
 It might be slow at some point, and it may be and will
-optimized later on.
+be optimized later on.
 
 So using this log, we may perform operations over the fixmies:
 
-  1. Change their state
+  1. Change their state (attributes)
   1. Mark them merged
   1. Mark them deleted
 
