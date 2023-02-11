@@ -44,8 +44,16 @@ HfsxkyaCGc FIXME: don't play log twice(?)
 ```
 
 
-So, therefore "fixmies" are immutable. So, how to manage
-their state or do something usefull with them?
+"Issues" or "fixmies" come from TODO/FIXME comments/entries from
+all (commited) git blobs across the project.
+
+So, therefore "fixmies" are immutable: editing "fixme"
+section in a file will cause to a new git blob to appear,
+and if the fixme's content is changed --- it will be a
+new fixme then.
+
+So, how to manage their state or do something
+usefull with them?
 
 All operations over fixmies are done via the log.
 
@@ -60,6 +68,9 @@ So using this log, we may perform operations over the fixmies:
   1. Change their state (attributes)
   1. Mark them merged
   1. Mark them deleted
+
+"Merge" means that "fixme" X is "fixme" Y now. "Fixme X" won't appear
+in the list anymore (but it will persist in a state).
 
 See the example:
 
