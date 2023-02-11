@@ -181,6 +181,41 @@ fixme-list-full-row-pref "## "
 
 fixme-list-full-row-suff "\n\n;;;"
 ```
+## Local config
+
+There is also an optional local config
+
+```
+$XDG_CONFIG_HOME/fixme/config
+```
+
+that allows each user setup their own stuff,
+that should not be shared across the project.
+
+Right now is't  only external pager utility and
+display context  for "fixme cat" command:
+
+
+```
+fixme-pager bat
+
+;; any external pager. if not specified, fixme will
+;; just output lines to STDOUT.
+;; fixme recognizes bat utility and pass --file-name
+;; argument to it to make  cat dumps looks really nice.
+
+fixme-def-context 2 10
+
+;; default -B and -A arguments for
+;; fixme cat command to show fixme in context
+
+```
+
+TODO:  default-local-config-with-def-context
+
+fixme-def-context makes dumps looks really nicer,
+  so it should be added by default.
+
 
 ## The FIXME format
 
