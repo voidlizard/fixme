@@ -375,7 +375,7 @@ Should be done as well.
 FIXME: gather-all-attributes-on-fixme-load
   Indeed
 
-### There are many attempts of making "distributed" and "git-oriented" bugs. Why another one?
+### There are many attempts of making "distributed" and "git-oriented" trackers. Why another one?
 
 They (IMO) are all failed.  git-bug is the best of them, however it's approach to make
 a separate reference for each issue is not viable. It's noisy and it's inconvenient to
@@ -446,9 +446,6 @@ local config file
 cat ~/.config/fixme/config
 
 fixme-pager bat
-
-fixme-map-syntax qqq txt
- ;; to fix situation if pager does not know that file type
 
 ```
 
