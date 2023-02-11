@@ -452,6 +452,17 @@ fixme-map-syntax qqq txt
 
 ```
 
+### There is should be restrictions on attribute values and names
+
+Indeed.  WIP.
+
+TODO: implement-limitations-on-attributes
+
+It may be easily setup via .fixme/config
+both for names and values, and maybe even
+for types.
+
+
 ### I need feature X.
 
 Let me know! Feedback is appreciated.
