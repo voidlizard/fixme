@@ -10,6 +10,7 @@ import Fixme.Hash
 import Fixme.State
 import Fixme.Types
 import Fixme.Prelude
+import Fixme.RunListAttribs
 import Fixme.LocalConfig
 
 import Data.Config.Suckless
@@ -44,6 +45,7 @@ import System.FilePattern
 import System.IO
 import System.Process.Typed
 import Text.InterpolatedString.Perl6 (qc)
+import Data.HashMap.Strict qualified as HashMap
 
 
 newtype ScanOpt =
@@ -55,8 +57,9 @@ makeLenses 'ScanOpt
 
 data ListOpts =
   ListOpt
-  { _listShowFull :: Bool
-  , _listFilters  :: [Text]
+  { _listShowFull  :: Bool
+  , _listFilters   :: [Text]
+  , _listFiltExact :: Bool
   }
 
 makeLenses 'ListOpt
@@ -99,12 +102,16 @@ instance Pretty (Format Fixme) where
                                   <> pretty (view fixmeLine f)
                                   <> colon
                                   <> pretty (view fixmeLineEnd f)
-
+                       <> line
+                       <> fmtDynAttr (view fixmeDynAttr f)
                        <> line
                        <> line
                        <> vcat (fmap (indent 0 . pretty) (view fixmeBody f))
                        <> pretty (view fmtSuff fmt)
                        <> line
+
+      where
+        fmtDynAttr hs = vcat [ pretty k <> ":" <+> pretty v  | (k,v) <- HashMap.toList hs ]
 
 runInit  :: IO ()
 runInit = do
@@ -198,7 +205,14 @@ runList opt = do
   r <- pure (parseTop cfgFile) `orDie` "can't parse config"
   log <- pure (parseTop logFileData) `orDie` "can't parse log"
 
-  fxms <- runFixmeState e (loadFixme (opt ^. listFilters))
+  filt <- if view listFiltExact  opt then do
+            let ss = opt ^. listFilters
+            let flt = [(Text.strip a,Text.intercalate ":" bs) | (a:bs) <- fmap (Text.splitOn ":") ss]
+            pure $ Filt @IO flt
+          else
+            pure $ Filt $ opt ^. listFilters
+
+  fxms <- runFixmeState e (loadFixme filt)
 
   let tl = maximumDef 6 $ fmap Text.length (pref r)
 
@@ -382,7 +396,7 @@ parseBlob def (gh, fp) = do
 
   heads' <- forM txt $ \(i,s) -> do
              let h = fixmeHash $ serialise (gh,i)
-             let fixme0 = Fixme "" "" h gh fp i 0 mempty
+             let fixme0 = Fixme "" "" h gh fp i 0 mempty mempty
              let fixme = parseOnly (pHeader def fixme0) s
              pure $ either mempty (List.singleton . (i,) . updateId) fixme
 
@@ -486,12 +500,12 @@ main = join . customExecParser (prefs showHelpOnError) $
     parser = hsubparser (  command "init"    (info pInit (progDesc "init fixme config"))
                         <> command "update"  (info pUpdate (progDesc "update state"))
                         <> command "list"    (info pList (progDesc "list"))
-                        -- <> command "track" (info pScan (progDesc "track fixme"))
+                        <> command "cat"     (info pCat    (progDesc "cat a fixme from git object"))
                         <> command "uuid"    (info pUuid   (progDesc "generate uuid"))
                         <> command "set"     (info pSet    (progDesc "set attribute value for a fixmie"))
                         <> command "del"     (info pDel    (progDesc "mark a fixme deleted"))
                         <> command "merge"   (info pMerge  (progDesc "mark a fixme merged"))
-                        <> command "cat"     (info pCat    (progDesc "cat a fixme from git object"))
+                        <> command "meta"    (info (hsubparser pMeta) (progDesc "metadata commands") )
                         <> command "scan"    (info pUpdate (progDesc "obsolete; use update"))
                         )
     pInit = do
@@ -506,8 +520,9 @@ main = join . customExecParser (prefs showHelpOnError) $
 
     pListOpts = do
       full <- flag False True ( long "full" <> short 'f' <> help "show full fixme" )
+      exact <- flag False True ( long "query" <> short 'q' <> help "query by attribute" )
       filt <- many $ strArgument  ( metavar "FILTER" )
-      pure $ ListOpt full filt
+      pure $ ListOpt full filt exact
 
     pList = withState . runList <$> pListOpts
 
@@ -538,4 +553,10 @@ main = join . customExecParser (prefs showHelpOnError) $
       b     <- optional $ option auto ( long "before" <> short 'B' <> help "lines before"  )
       a     <- optional $ option auto ( long "after" <> short 'A' <> help "lines after"  )
       pure $ runCat fxid b a
+
+
+    pMeta = command "attribs" (info pMetaAttr  (progDesc "list attributes"))
+
+    pMetaAttr = do
+      pure runListAttribs
 

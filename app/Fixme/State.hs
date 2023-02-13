@@ -1,5 +1,6 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# Language TemplateHaskell #-}
+{-# Language AllowAmbiguousTypes #-}
 module Fixme.State where
 
 import Fixme.Git
@@ -8,19 +9,25 @@ import Fixme.Hash
 import Fixme.Defaults
 import Fixme.Prelude
 
+import Data.Foldable(for_)
 import Codec.Serialise
 import Control.Monad.Reader
+import Data.Aeson qualified as Aeson
 import Database.SQLite.Simple
-import Database.SQLite.Simple.ToField
 import Database.SQLite.Simple.FromField
+import Database.SQLite.Simple.ToField
 import Data.ByteString.Lazy (ByteString)
+import Data.ByteString qualified as BS
+import Data.HashMap.Strict (HashMap)
+import Data.HashMap.Strict qualified as HashMap
 import Data.Maybe
-import Lens.Micro.Platform
 import Data.String
+import Data.Text.Encoding (encodeUtf8)
+import Data.Text qualified as Text
+import Data.Text (Text)
+import Lens.Micro.Platform
 import Prettyprinter
 import Text.InterpolatedString.Perl6 (qc)
-import Data.Text (Text)
-import Data.Text qualified as Text
 
 
 import Debug.Trace
@@ -214,7 +221,7 @@ setAttr gh' h t v = do
     pure ()
 
 putFixme :: MonadIO m => Fixme -> FixmeState m ()
-putFixme fxm = do
+putFixme fxm' = do
   let bs = serialise fxm
 
   conn <- asks (view fixmeEnvDb)
@@ -233,6 +240,9 @@ putFixme fxm = do
 
     setAttr Nothing (fxm ^. fixmeId) "tag"   (fxm ^. fixmeTag)
     setAttr Nothing (fxm ^. fixmeId) "title" (fxm ^. fixmeTitle)
+
+  where
+    fxm = set fixmeDynAttr mempty fxm'
 
 listFixme :: MonadIO m => FixmeState m [FixmeHash]
 listFixme = do
@@ -260,44 +270,115 @@ getFixme h = do
 
   pure fxm
 
--- FIXME: play-log-on-scan
---   Проигрывать логи при сканировании, складывать в кэш
---   При загрузке использовать фильтры
---
-loadFixme :: forall m . (MonadIO m) => [Text] -> FixmeState m [Fixme]
-loadFixme cnd'' = do
 
+makeFixme :: (ByteString, Text) -> Maybe Fixme
+makeFixme (s1, s2') =  fxm <&> over fixmeDynAttr insId .  set fixmeDynAttr attr
+  where
+    -- s1 = BS.fromStrict s1'
+    fxm  = either (const Nothing) Just $ deserialiseOrFail s1 :: Maybe Fixme
+    s2 = BS.fromStrict $ encodeUtf8 s2'
+    attr = fromMaybe mempty (Aeson.decode s2) :: HashMap Text Text
+    insId = case fxm of
+      Just e  -> HashMap.insert "id" (fromString $ show $ pretty $ view fixmeId e)
+      Nothing -> id
+
+
+
+class MonadIO m => LoadFixme q m  where
+  loadFixme :: q -> FixmeState m [Fixme]
+
+data Filt m = forall a . (LoadFixme a m) => Filt a
+
+instance MonadIO m => LoadFixme (Filt m) m where
+  loadFixme (Filt a) = loadFixme a
+
+instance MonadIO m => LoadFixme [Text] m where
+  loadFixme flt = do
+
+    conn <- asks (view fixmeEnvDb)
+
+    let vals = Text.intercalate "," [ "(?)" | _ <- cnd ]
+
+    let sql = [qc|
+
+       with vals(v) as (values {vals})
+       select  fixme as fxm
+             , ( select json_group_object(a.attr,a.value)
+                 from fixmeattr a where a.id = f.id) as attr
+
+        from fixme f
+       where
+          not exists (select null from merged m where m.a = f.id)
+          and not exists (select null from deleted d where d.id = f.id)
+          and  (
+            exists ( select null from fixmeattr a
+                     where a.id = f.id
+                       and (
+                            (  exists (select null from vals where a.value like v ) )
+                         or (  exists (select null from vals where a.id like v ) )
+                        )
+                   )
+          )
+    |]
+
+    -- let fxm bs = either (const  Nothing) Just $ deserialiseOrFail @Fixme bs
+    liftIO $ query conn sql cnd <&> mapMaybe makeFixme
+
+    where
+
+      cnd'' = flt
+
+      cnd' | null cnd'' = [""]
+           | otherwise = cnd''
+
+      cnd = fmap (<> "%") cnd'
+
+
+instance MonadIO m => LoadFixme [(Text,Text)] m where
+  loadFixme [] = pure mempty
+
+  loadFixme flt = do
+
+    conn <- asks (view fixmeEnvDb)
+
+    let vals = Text.intercalate "," [ "(?,?)" | _ <- flt ]
+
+    let sql = [qc|
+
+      with vals(a,v) as (values {vals})
+      select f.fixme
+           , ( select json_group_object(a.attr,a.value)
+               from fixmeattr a where a.id = f.id) as attr
+
+      from fixme f
+             join fixmeattr a on a.id = f.id
+             join vals v on v.a = a.attr and v.v = a.value
+       where
+        not exists (select null from merged m where m.a = f.id )
+        and not exists (select null from deleted d where d.id = f.id )
+
+      group by f.id
+    |]
+
+
+    let unflt = mconcat [ [k,v] | (k,v) <- flt ]
+
+    let q = HashMap.fromList flt
+
+    liftIO $ query conn sql unflt <&> mapMaybe makeFixme
+                                  <&> filter (HashMap.isSubmapOf q . view fixmeDynAttr)
+
+
+
+listAttrs :: MonadIO m => FixmeState m [Text]
+listAttrs = do
   conn <- asks (view fixmeEnvDb)
 
-  let vals = Text.intercalate "," [ "(?)" | _ <- cnd ]
-
   let sql = [qc|
-   with vals(v) as (values {vals})
-   select fixme from fixme f
-   where
-      not exists (select null from merged m where m.a = f.id)
-      and not exists (select null from deleted d where d.id = f.id)
-      and  (
-        exists ( select null from fixmeattr a
-                 where a.id = f.id
-                   and (
-                        (  exists (select null from vals where a.value like v ) )
-                     or (  exists (select null from vals where a.id like v ) )
-                    )
-               )
-      )
+    select distinct(attr) from fixmeattr;
   |]
 
-  let fxm bs = either (const  Nothing) Just $ deserialiseOrFail @Fixme bs
-  liftIO $ query conn sql cnd <&> fmap fromOnly <&> mapMaybe fxm
-
-  where
-
-    cnd' | null cnd'' = [""]
-         | otherwise = cnd''
-
-    cnd = fmap (<> "%") cnd'
-
+  liftIO $ query_  conn sql <&> fmap fromOnly
 
 instance ToField GitHash where
   toField h = toField (show $ pretty h)

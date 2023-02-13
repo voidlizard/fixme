@@ -9,6 +9,7 @@ import Data.Config.Suckless
 import Data.Text (Text)
 import Lens.Micro.Platform
 import GHC.Generics hiding (to)
+import Data.HashMap.Strict (HashMap)
 import Codec.Serialise
 
 type C = MegaParsec
@@ -38,6 +39,7 @@ data Fixme =
   , _fixmeLine        :: Int
   , _fixmeIndent      :: Int
   , _fixmeBody        :: [Text]
+  , _fixmeDynAttr     :: HashMap Text Text
   }
   deriving stock (Generic,Show)
 

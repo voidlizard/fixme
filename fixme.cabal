@@ -69,10 +69,12 @@ executable fixme
       Fixme.Prelude
       Fixme.Types
       Fixme.LocalConfig
+      Fixme.RunListAttribs
 
     -- other-extensions:
     build-depends:   base
                    , async
+                   , aeson
                    , attoparsec
                    , base16-bytestring
                    , base58-bytestring

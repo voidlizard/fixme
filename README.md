@@ -373,10 +373,11 @@ started from 'Alice'
 
 How to filter by attribute exactly 'assigned' == exactly 'Alice' ?
 
-Yeah, it must be implemented. WIP.
+```
+fixme list -q assigned:Alice  workflow:wip
+```
 
-FIXME: implement-exact-atribute-matching-in-queries
-  Yep. Really needed.
+will print all fixmies with assigned == 'Alice' and workflow == 'wip'
 
 
 ### How to display all attributes set for a fixme?
