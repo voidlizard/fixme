@@ -214,8 +214,8 @@ runList opt = do
   for_ fxms $ \fxm -> do
     print $ pretty (fmt fxm)
 
-runScan :: ScanOpt -> IO ()
-runScan opt = do
+runUpdate :: ScanOpt -> IO ()
+runUpdate opt = do
 
   cfgFile <- readFile confFile
   logFileData <- readFile logFile
@@ -483,23 +483,24 @@ main = join . customExecParser (prefs showHelpOnError) $
   )
   where
     parser ::  O.Parser (IO ())
-    parser = hsubparser (  command "init"  (info pInit (progDesc "init fixme config"))
-                        <> command "scan"  (info pScan (progDesc "scan"))
-                        <> command "list"  (info pList (progDesc "list"))
+    parser = hsubparser (  command "init"    (info pInit (progDesc "init fixme config"))
+                        <> command "update"  (info pUpdate (progDesc "update state"))
+                        <> command "list"    (info pList (progDesc "list"))
                         -- <> command "track" (info pScan (progDesc "track fixme"))
-                        <> command "uuid"  (info pUuid   (progDesc "generate uuid"))
-                        <> command "set"   (info pSet    (progDesc "set attribute value for a fixmie"))
-                        <> command "del"   (info pDel    (progDesc "mark a fixme deleted"))
-                        <> command "merge" (info pMerge  (progDesc "mark a fixme merged"))
-                        <> command "cat"   (info pCat    (progDesc "cat a fixme from git object"))
+                        <> command "uuid"    (info pUuid   (progDesc "generate uuid"))
+                        <> command "set"     (info pSet    (progDesc "set attribute value for a fixmie"))
+                        <> command "del"     (info pDel    (progDesc "mark a fixme deleted"))
+                        <> command "merge"   (info pMerge  (progDesc "mark a fixme merged"))
+                        <> command "cat"     (info pCat    (progDesc "cat a fixme from git object"))
+                        <> command "scan"    (info pUpdate (progDesc "obsolete; use update"))
                         )
     pInit = do
       pure runInit
 
-    pScanOpts = do
+    pUpdateOpts = do
       ScanOpt <$> flag False True ( long "dry" <> short 'n' <> help "dry run" )
 
-    pScan = withState . runScan <$> pScanOpts
+    pUpdate = withState . runUpdate <$> pUpdateOpts
 
     pUuid = pure runUuid
 

@@ -11,7 +11,7 @@ fixme init
 
 vim .fixme/config
 
-fixme scan
+fixme update
 
 fixme list
 
@@ -58,7 +58,7 @@ usefull with them?
 All operations over fixmies are done via the log.
 
 This log is located in .fixme/log file and it
-replays each time when 'fixme scan' is called.
+replays each time when 'fixme update' is called.
 
 It might be slow at some point, and it may be and will
 be optimized later on.
@@ -89,7 +89,7 @@ fixme-del "7AGbMzAHza" ;; puts fixme #7AGbMzAHza into a "deleted" table. so it
                        ;; however it's not deleted.
 
                        ;; there is no sense to delete anything,
-                       ;; 'cause fix scan will scan all blobs in repository
+                       ;; 'cause fix update an will scan all blobs in repository
                        ;; from the very beginning.
 
                        ;; so any deleted fixme may be undeleted with ease.
@@ -118,12 +118,12 @@ and states as far as they have the same log.
 
 
 It works as a cache. It might be deleted, it will be re-created next
-time 'fixme scan' will be running.
+time 'fixme update' will be running.
 
 
 What if some fixmies got a similar id?  They will be displayed all.
 
-It should be ignored by 'fixme scan' process, so it should not
+It should be ignored by 'fixme update' process, so it should not
 (supposedly) processed.
 
 It you really need a duplicated fixme, make it unique by adding
@@ -279,7 +279,7 @@ echo .fixme/state.db >> .gitignore
 
 git commit -a m 'added fixme'
 
-fixme scan
+fixme update
 fixme list
 
 ```
@@ -364,7 +364,7 @@ It will just set a text attribute 'assigned' to value 'Alice'. How to
 check it out?
 
 ```
-fixme scan
+fixme update
 fixme list Alice
 ```
 
