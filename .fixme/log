@@ -4,83 +4,46 @@
 
 
 fixme-merged "BbjfCj7qDD" "H4epFBNr2i"
-
 fixme-merged "6D8sQLF6uc" "4rCoVVC94N"
-
-
-fixme-set "workflow" "#closed" "7AGbMzAHza"
-fixme-set "workflow" "#closed" "7AGbMzAHza"
-fixme-set "workflow" "#closed" "7AGbMzAHza"
+fixme-set "workflow" "done" "7AGbMzAHza"
+fixme-set "workflow" "done" "7AGbMzAHza"
+fixme-set "workflow" "done" "7AGbMzAHza"
 fixme-del "7AGbMzAHza"
-fixme-set "workflow" "#closed" "AEMM9wdH6s"
+fixme-set "workflow" "done" "AEMM9wdH6s"
 fixme-set "assigned" "Alice" "9FcnrRf8sN"
 fixme-del "4CCckthVQK"
 fixme-del "Bbbveo4pTU"
-
-
 fixme-del "3sjS1mHByY"
-
 fixme-del "AyVyPjyLQR"
-
 fixme-del "2zVTNiLqvH"
-
 fixme-del "FRDFhXNQki"
-
 fixme-del "FUw1Qy8wVt"
-
 fixme-del "FpKZCs57qW"
-
-fixme-set "workflow" "#closed" "8ugsGWLMiN"
-
+fixme-set "workflow" "done" "8ugsGWLMiN"
 fixme-del "8ugsGWLMiN"
-
 fixme-merge "FZsPuFeBi8" "CRMahCx7D3"
-
 fixme-merged "FZsPuFeBi8" "CRMahCx7D3"
-
 fixme-del "E33R2uYH7K"
-
 fixme-set "resolution" "not-actual" "AEMM9wdH6s"
-
-
-
 fixme-del "AEMM9wdH6s"
-
 fixme-set "resolution" "done" "2L8kgTSCHq"
-
 fixme-del "2L8kgTSCHq"
-
 fixme-set "resolution" "done" "H4epFBNr2i"
-
 fixme-del "H4epFBNr2i"
-
 fixme-set "resolution" "done" "kBQDkXamnq"
-
 fixme-del "kBQDkXamnq"
-
 fixme-set "resolution" "done" "4rCoVVC94N"
-
 fixme-del "4rCoVVC94N"
-
 fixme-set "resolution" "done" "GFGTEE9Sua"
-
 fixme-del "GFGTEE9Sua"
-
-
 fixme-set "resolution" "done" "AXCfH7rVBS"
-
 fixme-del "AXCfH7rVBS"
-
 fixme-del "DVoFKQuKxK"
-
 fixme-set "resolution" "done" "BytLkqK7JX"
-
 fixme-del "BytLkqK7JX"
-
 fixme-set "workflow" "wip" "14i6jp5Ev6"
-
 fixme-set "workflow" "test" "14i6jp5Ev6"
-
 fixme-set "workflow" "test" "gZsQdnjZGD"
-
 fixme-set "workflow" "test" "EqnPVn4ZV8"
+
+fixme-set "workflow" "test" "8TbJf2urfd"

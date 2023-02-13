@@ -14,8 +14,6 @@ fixme-files doc/devlog
 
 fixme-files-ignore .direnv/** dist-newstyle/**
 
-fixme-files qqq.qqq
-
 fixme-id-show-len 10
 
 ; fixme-tag-prefix #
@@ -23,5 +21,11 @@ fixme-id-show-len 10
 fixme-list-full-row-pref "## "
 fixme-list-full-row-suff "\n\n;;;"
 
+
+;; attrib name is an atom!
+
+fixme-attribs assigned workflow resolution
+
+fixme-value-set workflow new backlog wip test fixed done
 
 

@@ -11,6 +11,7 @@ import Fixme.State
 import Fixme.Types
 import Fixme.Prelude
 import Fixme.RunListAttribs
+import Fixme.Config
 import Fixme.LocalConfig
 
 import Data.Config.Suckless
@@ -18,6 +19,7 @@ import Data.Config.Suckless
 import Codec.Serialise
 import Control.Concurrent.Async
 import Control.Monad
+import Data.Set qualified as Set
 import Data.Attoparsec.Text hiding (option,take)
 import Data.Attoparsec.Text qualified as Atto
 import Data.ByteString.Lazy.Char8 qualified as LBS
@@ -133,53 +135,6 @@ runInit = do
       liftIO $ print $ pretty "init db"
       initState
 
-masks :: [Syntax C] -> [String]
-masks r =
-  mconcat [ fmap (show.pretty) fs
-          | (ListVal @C (Key "fixme-files" fs) ) <- r
-          ]
-
-ignored :: [Syntax C] -> [String]
-ignored r =
-  mconcat [ fmap (show.pretty) fs
-          | (ListVal @C (Key "fixme-files-ignore" fs) ) <- r
-          ]
-
-comm :: IsString b => [Syntax C] -> [b]
-comm r =
-  mconcat [ fmap (fromString.show.pretty) fs
-          | (ListVal @C (Key "fixme-comments" fs) ) <- r
-          ]
-
-pref :: IsString b => [Syntax C] -> [b]
-pref r =
-  mconcat [ fmap (fromString.show.pretty) fs
-          | (ListVal @C (Key "fixme-prefix" fs) ) <- r
-          ]
-
-idlen :: [Syntax C] -> Integer
-idlen r =
-  lastDef 8 [ e
-            | (ListVal @C (Key "fixme-id-show-len" [LitIntVal e]) ) <- r
-            ]
-
-tpref :: IsString a => [Syntax C] -> a
-tpref r =
-  lastDef "" [ (fromString.show.pretty) e
-             | (ListVal @C (Key "fixme-tag-prefix" [e]) ) <- r
-             ]
-
-suff :: [Syntax C] -> Text
-suff r =
-  lastDef "" [  e
-             | (ListVal @C (Key "fixme-list-full-row-suff" [LitStrVal e]) ) <- r
-             ]
-
-rpref :: [Syntax C] -> Text
-rpref r  =
-  lastDef "" [  e
-             | (ListVal @C (Key "fixme-list-full-row-pref" [LitStrVal e]) ) <- r
-             ]
 
 runUuid :: IO ()
 runUuid = do
@@ -193,7 +148,6 @@ runLog dry s = withState do
   unless dry do
     appendFile logFile "\n"
     appendFile logFile s
-    appendFile logFile "\n"
 
 runList :: ListOpts -> IO ()
 runList opt = do
@@ -258,6 +212,10 @@ runUpdate opt = do
                 | ListVal @C (Key "fixme-set" [LitStrVal a, LitStrVal v, LitStrVal i]) <- log
                 ]
 
+    let allowedName s = s `Set.member` allowedAttribs r
+
+    let allowedVal k v = isAllowedVal k v (allowedValues r)
+
     let fpat (_,f) =  or [ x ?== f | x <- masks r ]
                    && not (and [ x ?== f | x <- ignored r] )
 
@@ -290,16 +248,31 @@ runUpdate opt = do
 
     -- FIXME: to-play-log-function
 
+
       run <- forM attrs $ \(i,a,v) -> do
         ii <- findId i
 
+        let valid = allowedName a && allowedVal a v
+
+        unless (allowedVal a v) do
+          liftIO $ hPrint stderr $ "*** error: value" <+> pretty v
+                                                      <+> "not allowed for"
+                                                      <+> pretty a
+
+        unless (allowedName a) do
+          liftIO $ hPrint stderr $ "*** error: attrib name" <+> pretty a
+                                                            <+> pretty "not allowed"
+
         case ii of
-           [x] -> pure [ setAttr Nothing x a v ]
-           []  -> pure [ setAttr Nothing (fromString i) a v ]
+           [x] | valid     -> pure [ setAttr Nothing x a v ]
+               | otherwise -> pure []
+           []  | valid     -> pure [ setAttr Nothing (fromString i) a v ]
+               | otherwise -> pure []
+
            _   -> do
              liftIO $ hPrint stderr $ "fixme-set:"
                                          <+> pretty ii
-                                         <+> "is ambigous, ignored"
+                                         <+> "is ambiguous, ignored"
              pure mempty
 
       unless ( opt ^. scanDontAdd ) do
@@ -315,7 +288,7 @@ runUpdate opt = do
            _   -> do
              liftIO $ hPrint stderr $ "fixme-del:"
                                          <+> pretty i
-                                         <+> "is ambigous, ignored"
+                                         <+> "is ambiguous, ignored"
              pure mempty
 
       unless ( opt ^. scanDontAdd ) do
@@ -555,8 +528,19 @@ main = join . customExecParser (prefs showHelpOnError) $
       pure $ runCat fxid b a
 
 
-    pMeta = command "attribs" (info pMetaAttr  (progDesc "list attributes"))
+    pMeta =    command "attribs" (info pMetaAttr  (progDesc "list attributes"))
+            <> command "config" (info pConf (progDesc "dumps config"))
+
 
     pMetaAttr = do
       pure runListAttribs
+
+    pConf = pure $ do
+
+      cfgFile <- readFile confFile
+
+      -- FIXME: better error handling
+      r <- pure (parseTop cfgFile) `orDie` "can't parse config"
+
+      print $ vcat (fmap pretty r)
 
