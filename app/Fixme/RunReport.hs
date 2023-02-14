@@ -27,6 +27,7 @@ import System.IO
 import System.Exit
 import Text.InterpolatedString.Perl6 (qc,q)
 import Data.Maybe
+import Text.ANSI qualified as ANSI
 
 import Data.Matrix qualified as M
 
@@ -34,6 +35,13 @@ newtype Report = Report { items :: [HashMap Text Text] }
                  deriving stock (Generic)
 
 instance ToJSON Report
+
+-- colorize s | LT.isPrefixOf "FIXME" s = LT.fromStrict $ ANSI.red( LT.toStrict s)
+--            | LT.isPrefixOf "TODO"  s = LT.fromStrict $ ANSI.yellow( LT.toStrict s)
+--            | otherwise = s
+
+colorize :: LT.Text -> LT.Text
+colorize = id
 
 columns :: [Syntax C] -> LT.Text -> IO LT.Text
 columns syn ss = do
@@ -46,12 +54,13 @@ columns syn ss = do
 
   let lz = LT.lines ss & fmap (LT.splitOn delim)
 
+
   pure $ LT.unlines $ LT.intercalate " " <$> fmap (zipWith fmt fmts) lz
 
   where
 
     fmt :: Syntax C -> LT.Text -> LT.Text
-    fmt sy s = case sy of
+    fmt sy s = colorize $ case sy of
       SymbolVal "_" -> s
       LitIntVal n   -> LT.take (fromIntegral n) $ LT.justifyLeft (fromIntegral n) ' ' s
       _             -> ""

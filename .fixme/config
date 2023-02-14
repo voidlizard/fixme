@@ -20,9 +20,11 @@ fixme-id-show-len 10
 
 ;; attrib name is an atom!
 
-fixme-attribs assigned workflow resolution
+fixme-attribs assigned workflow resolution asap
 
 fixme-value-set workflow new backlog wip test fixed done
+
+fixme-value-set asap asap
 
 
 [ fixme-report all json

@@ -101,6 +101,7 @@ executable fixme
                    , sqlite-simple
                    , suckless-conf
                    , text
+                   , text-ansi
                    , transformers
                    , trie-simple
                    , typed-process

@@ -384,10 +384,6 @@ instance MonadIO m => LoadFixme [(Text,Text)] m where
 
     let q = HashMap.fromList [ (stripDsl k,v) | (k,v) <- flt', not (Text.isPrefixOf "?" k) ]
 
-    -- liftIO $ print unflt
-    -- liftIO $ print nq
-    -- liftIO $ print q
-
     liftIO $ query conn sql unflt <&> mapMaybe makeFixme
                                   <&> filter (HashMap.isSubmapOf q . view fixmeDynAttr)
                                   <&> invFilt
