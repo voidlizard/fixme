@@ -48,3 +48,6 @@ fixme-set "workflow" "test" "EqnPVn4ZV8"
 fixme-set "workflow" "test" "8TbJf2urfd"
 
 fixme-set "workflow" "wip" "FMPweN6dmP"
+fixme-merged "FMPweN6dmP" "gZsQdnjZGD"
+fixme-set "workflow" "wip" "gZsQdnjZGD"
+fixme-set "workflow" "test" "gZsQdnjZGD"
