@@ -11,6 +11,7 @@ import Fixme.State
 import Fixme.Types
 import Fixme.Prelude
 import Fixme.RunListAttribs
+import Fixme.RunReport
 import Fixme.Config
 import Fixme.LocalConfig
 
@@ -66,55 +67,6 @@ data ListOpts =
 
 makeLenses 'ListOpt
 
-data FmtAttr =
-  FmtAttr
-  { _fmtShortId :: Int
-  , _fmtTagLen  :: Int
-  , _fmtTagPref :: Text
-  , _fmtPref    :: Text
-  , _fmtSuff    :: Text
-  }
-
-makeLenses 'FmtAttr
-
-data Format a = Brief FmtAttr a
-              | Full FmtAttr a
-
-instance Pretty (Format Fixme) where
-  pretty (Brief fmt f) =   tp <> pretty shortId
-                       <+> fill w (pretty (view fixmeTag f))
-                       <+> pretty (Text.take 50 $ view fixmeTitle f)
-
-    where
-      shortId = List.take (fmt ^. fmtShortId) (show (pretty (view fixmeId f)))
-      w = fmt ^. fmtTagLen
-      tp = pretty $ fmt ^. fmtTagPref
-
-  pretty (Full fmt f) =   pretty (view fmtPref fmt)
-                       <> pretty (view fixmeTag f)
-                       <+> pretty (view fixmeTitle f)
-                       <> line
-                       <> "id:" <+> pretty (fmt ^. fmtTagPref)
-                                <>  pretty (view fixmeId f)
-                       <> line
-                       <> "file-hash:" <+> pretty (view fixmeFileGitHash f)
-                       <> line
-                       <> "file:" <+> pretty (view fixmeFile f)
-                                  <> colon
-                                  <> pretty (view fixmeLine f)
-                                  <> colon
-                                  <> pretty (view fixmeLineEnd f)
-                       <> line
-                       <> fmtDynAttr (view fixmeDynAttr f)
-                       <> line
-                       <> line
-                       <> vcat (fmap (indent 0 . pretty) (view fixmeBody f))
-                       <> pretty (view fmtSuff fmt)
-                       <> line
-
-      where
-        fmtDynAttr hs = vcat [ pretty k <> ":" <+> pretty v  | (k,v) <- HashMap.toList hs ]
-
 runInit  :: IO ()
 runInit = do
 
@@ -154,14 +106,12 @@ runList opt = do
   e <- newFixmeEnv
 
   cfgFile <- readFile confFile
-  logFileData <- readFile logFile
 
   r <- pure (parseTop cfgFile) `orDie` "can't parse config"
-  log <- pure (parseTop logFileData) `orDie` "can't parse log"
 
   filt <- if view listFiltExact  opt then do
             let ss = opt ^. listFilters
-            let flt = [(Text.strip a,Text.intercalate ":" bs) | (a:bs) <- fmap (Text.splitOn ":") ss]
+            let flt = parseFilt ss
             pure $ Filt @IO flt
           else
             pure $ Filt $ opt ^. listFilters
@@ -470,9 +420,10 @@ main = join . customExecParser (prefs showHelpOnError) $
   )
   where
     parser ::  O.Parser (IO ())
-    parser = hsubparser (  command "init"    (info pInit (progDesc "init fixme config"))
+    parser = hsubparser (  command "init"    (info pInit   (progDesc "init fixme config"))
                         <> command "update"  (info pUpdate (progDesc "update state"))
-                        <> command "list"    (info pList (progDesc "list"))
+                        <> command "list"    (info pList   (progDesc "list"))
+                        <> command "report"  (info pReport (progDesc "run report"))
                         <> command "cat"     (info pCat    (progDesc "cat a fixme from git object"))
                         <> command "uuid"    (info pUuid   (progDesc "generate uuid"))
                         <> command "set"     (info pSet    (progDesc "set attribute value for a fixmie"))
@@ -535,7 +486,7 @@ main = join . customExecParser (prefs showHelpOnError) $
     pMetaAttr = do
       pure runListAttribs
 
-    pConf = pure $ do
+    pConf = pure $ withState do
 
       cfgFile <- readFile confFile
 
@@ -543,4 +494,9 @@ main = join . customExecParser (prefs showHelpOnError) $
       r <- pure (parseTop cfgFile) `orDie` "can't parse config"
 
       print $ vcat (fmap pretty r)
+
+    pReport = do
+      name <- optional $ strArgument ( metavar "REPORT-NAME" )
+      pure $ withState $ runReport name
+
 

@@ -29,3 +29,17 @@ fixme-attribs assigned workflow resolution
 fixme-value-set workflow new backlog wip test fixed done
 
 
+[ fixme-report all json
+  (render builtin:microstache report-wip.tpl)
+  (post builtin:columns | 10 8 8 10 _)
+]
+
+[ fixme-report test json
+  (render builtin:microstache report-wip.tpl)
+  (post builtin:columns | 10 8 8 10 _)
+  (query workflow:test)
+]
+
+[ fixme-report wip-json json
+]
+

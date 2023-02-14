@@ -71,23 +71,28 @@ executable fixme
       Fixme.Types
       Fixme.LocalConfig
       Fixme.RunListAttribs
+      Fixme.RunReport
 
     -- other-extensions:
     build-depends:   base
-                   , async
                    , aeson
+                   , aeson-pretty
+                   , async
                    , attoparsec
                    , base16-bytestring
                    , base58-bytestring
                    , bytestring
                    , containers
                    , cryptonite
+                   , data-default
                    , directory
                    , filepath
                    , filepattern
                    , interpolatedstring-perl6
+                   , matrices
                    , memory
                    , microlens-platform
+                   , microstache
                    , mtl
                    , optparse-applicative
                    , prettyprinter
