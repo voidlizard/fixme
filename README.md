@@ -182,15 +182,55 @@ fixme-files-ignore .direnv/** dist-newstyle/**
 
 fixme-id-show-len 10
 
+;; report definition section
+;; fixme-report statement:
+;;
+;; fixme-report report-id report-type
+;;
+;;  right now report-type is always json
 
-;; prefix for displaying fixmie in "full" mode
+[ fixme-report all json
 
-fixme-list-full-row-pref "## "
+;; render render-id template-file
+;; right now render-id is always  builtin:microstache
+;; may be omitted. in this case, plain json will be dumped
+
+  (render builtin:microstache report-wip.tpl)
+
+  (post builtin:columns | 10 10 8 10 _)
+
+;; postprocessor
+;; post postprocessor args
+;; right now it's only builtin:columns
+;; args are: delim col-width*
+;; _ means left the columns as is
+;; only the enumerated colums will be displayed,
+;; i.e if there is less args that colums in the output,
+;; remaining colums will be dropped.
+;; use _ to enumerate a column
+
+  (query ~workflow:backlog)
+
+;; query part. there are maybe
+;; (query ~a:b)  a != b
+;; (query ?a:b) (query ?a:c) a == b|| a == c
+;; (query a:b) (query b:c)  a == b && b == c
+;; this part is still wip, but works somehow.
+
+  ; (query ?workflow:wip)
+  ; (query ?workflow:test)
+]
+
+;; another example
+[ fixme-report wip json
+  (render builtin:microstache report-wip.tpl)
+  (post builtin:columns | 10 10 8 10 _)
+  (query ?workflow:test)
+  (query ?workflow:wip)
+  (query ?workflow:fixed)
+]
 
 
-;; suffix for displaying a fixme in "full" mode
-
-fixme-list-full-row-suff "\n\n;;;"
 ```
 ## Local config
 
