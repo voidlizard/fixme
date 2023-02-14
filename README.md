@@ -501,15 +501,14 @@ fixme-pager bat
 
 ```
 
+### Why the config syntax is so weird?
+
+It is not. It is sexps. On the toplevel parens
+may be omitted, but it all sexps.
+
 ### There is should be restrictions on attribute values and names
 
-Indeed.  WIP.
-
-TODO: implement-limitations-on-attributes
-
-It may be easily setup via .fixme/config
-both for names and values, and maybe even
-for types.
+Done
 
 
 ### I need feature X.
