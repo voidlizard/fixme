@@ -162,20 +162,20 @@ runReport args mbFilt = do
 
   zzz <- case render of
 
-              Just [SymbolVal "builtin:microstache", SymbolVal "builtin:list-brief"] -> do
-                let res = compileMustacheText "builtin:list-brief" builtinListBriefTpl
-                withTemplate res
+            Just [SymbolVal "builtin:microstache", SymbolVal "builtin:list-brief"] -> do
+              let res = compileMustacheText "builtin:list-brief" builtinListBriefTpl
+              withTemplate res
 
-              Just [SymbolVal "builtin:microstache", SymbolVal "builtin:list-full"] -> do
-                let res = compileMustacheText "builtin:list-full" builtinListFullTpl
-                withTemplate res
+            Just [SymbolVal "builtin:microstache", SymbolVal "builtin:list-full"] -> do
+              let res = compileMustacheText "builtin:list-full" builtinListFullTpl
+              withTemplate res
 
-              Just [SymbolVal "builtin:microstache", t] -> do
-                tpl <- canonicalizePath (dir </> Text.unpack (txt t))
-                compileMustacheFile tpl >>= withTemplate . Right
+            Just [SymbolVal "builtin:microstache", t] -> do
+              tpl <- canonicalizePath (dir </> Text.unpack (txt t))
+              compileMustacheFile tpl >>= withTemplate . Right
 
-              _ ->  pure $ \f -> do
-                      BS.putStr $ encodePretty $ Report $ fmap (view fixmeDynAttr) f
+            _ ->  pure $ \f -> do
+                    BS.putStr $ encodePretty $ Report $ fmap (view fixmeDynAttr) f
 
   e <- newFixmeEnv
   runFixmeState e $ do
