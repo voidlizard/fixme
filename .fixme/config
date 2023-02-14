@@ -18,10 +18,6 @@ fixme-id-show-len 10
 
 ; fixme-tag-prefix #
 
-fixme-list-full-row-pref "## "
-fixme-list-full-row-suff "\n\n;;;"
-
-
 ;; attrib name is an atom!
 
 fixme-attribs assigned workflow resolution
@@ -50,6 +46,15 @@ fixme-value-set workflow new backlog wip test fixed done
   (post builtin:columns | 10 10 8 10 _)
   (query workflow:backlog)
 ]
+
+;; it's perfectly possible to override default
+;; reports. do it on your own risk
+
+( fixme-report builtin:list-brief json
+  (render builtin:microstache report-wip.tpl)
+  (post builtin:columns | 10 10 8 10 _)
+)
+
 
 [ fixme-report wip-json json
 ]

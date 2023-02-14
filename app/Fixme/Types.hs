@@ -61,17 +61,14 @@ data FmtAttr =
   { _fmtShortId :: Int
   , _fmtTagLen  :: Int
   , _fmtTagPref :: Text
-  , _fmtPref    :: Text
-  , _fmtSuff    :: Text
   }
 
 makeLenses 'FmtAttr
 
 instance Default FmtAttr where
-  def = FmtAttr 10 8 "" "" ""
+  def = FmtAttr 10 8 ""
 
 data Format a = Brief FmtAttr a
-              | Full FmtAttr a
 
 instance Pretty (Format Fixme) where
   pretty (Brief fmt f) =   tp <> pretty shortId
@@ -82,32 +79,6 @@ instance Pretty (Format Fixme) where
       shortId = List.take (fmt ^. fmtShortId) (show (pretty (view fixmeId f)))
       w = fmt ^. fmtTagLen
       tp = pretty $ fmt ^. fmtTagPref
-
-  pretty (Full fmt f) =   pretty (view fmtPref fmt)
-                       <> pretty (view fixmeTag f)
-                       <+> pretty (view fixmeTitle f)
-                       <> line
-                       <> "id:" <+> pretty (fmt ^. fmtTagPref)
-                                <>  pretty (view fixmeId f)
-                       <> line
-                       <> "file-hash:" <+> pretty (view fixmeFileGitHash f)
-                       <> line
-                       <> "file:" <+> pretty (view fixmeFile f)
-                                  <> colon
-                                  <> pretty (view fixmeLine f)
-                                  <> colon
-                                  <> pretty (view fixmeLineEnd f)
-                       <> line
-                       <> fmtDynAttr (view fixmeDynAttr f)
-                       <> line
-                       <> line
-                       <> vcat (fmap (indent 0 . pretty) (view fixmeBody f))
-                       <> pretty (view fmtSuff fmt)
-                       <> line
-
-      where
-        fmtDynAttr hs = vcat [ pretty k <> ":" <+> pretty v  | (k,v) <- HashMap.toList hs ]
-
 
 
 

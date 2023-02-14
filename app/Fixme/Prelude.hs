@@ -27,7 +27,9 @@ maybe1 mb n j = maybe n j mb
 txt :: Pretty a => a -> Text
 txt = Text.pack . show . pretty
 
+-- FIXME: intercalate ":" is a bad idea
 parseFilt :: [Text] -> [(Text,Text)]
 parseFilt ss = [(Text.strip a,Text.intercalate ":" bs) | (a:bs) <- fmap (Text.splitOn ":") ss]
+
 
 

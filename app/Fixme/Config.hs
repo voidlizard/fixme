@@ -49,18 +49,6 @@ tpref r =
              | (ListVal @C (Key "fixme-tag-prefix" [e]) ) <- r
              ]
 
-suff :: [Syntax C] -> Text
-suff r =
-  lastDef "" [  e
-             | (ListVal @C (Key "fixme-list-full-row-suff" [LitStrVal e]) ) <- r
-             ]
-
-rpref :: [Syntax C] -> Text
-rpref r  =
-  lastDef "" [  e
-             | (ListVal @C (Key "fixme-list-full-row-pref" [LitStrVal e]) ) <- r
-             ]
-
 allowedAttribs :: [Syntax C ] -> Set Text
 allowedAttribs r = Set.fromList $
   mconcat [ [ s | SymbolVal (Id s) <- sv  ]
@@ -73,8 +61,6 @@ allowedValues r = Map.fromListWith (<>) a
     a = [ (txt v, Set.fromList (fmap txt vs))
         | (ListVal @C (Key "fixme-value-set" (v:vs)) ) <- r
         ]
-
-    txt = Text.pack . show . pretty
 
 isAllowedVal :: Text -> Text -> Map Text (Set Text) -> Bool
 isAllowedVal k v m = case Map.lookup k m of

@@ -116,21 +116,12 @@ runList opt = do
           else
             pure $ Filt $ opt ^. listFilters
 
-  fxms <- runFixmeState e (loadFixme filt)
+  let brief = ["builtin:list-brief"]
+  let full  = ["builtin:list-full"]
 
-  let tl = maximumDef 6 $ fmap Text.length (pref r)
+  let report = if view listShowFull opt then full else brief
 
-  let fmt = if view listShowFull opt then Full o else Brief o
-        where
-          o = FmtAttr (fromIntegral (idlen r) ) tl (tpref r) mbPre mbSuff
-          mbPre   | view listShowFull opt = rpref r
-                  | otherwise = ""
-
-          mbSuff  | view listShowFull opt = suff r
-                  | otherwise = ""
-
-  for_ fxms $ \fxm -> do
-    print $ pretty (fmt fxm)
+  runReport report (Just filt)
 
 runUpdate :: ScanOpt -> IO ()
 runUpdate opt = do
@@ -181,7 +172,7 @@ runUpdate opt = do
 
     -- FIXME: remove-tag-len-hardcode-somehow-new
 
-    let o = FmtAttr (fromIntegral (idlen r) ) 8 (tpref r) "" ""
+    let o = FmtAttr (fromIntegral (idlen r) ) 8 (tpref r)
 
     unless ( opt ^. scanDontAdd ) do
 
@@ -496,7 +487,6 @@ main = join . customExecParser (prefs showHelpOnError) $
       print $ vcat (fmap pretty r)
 
     pReport = do
-      name <- optional $ strArgument ( metavar "REPORT-NAME" )
-      pure $ withState $ runReport name
-
+      args <- many $ strArgument ( metavar "REPORT-NAME" )
+      pure $ withState $ runReport args Nothing
 

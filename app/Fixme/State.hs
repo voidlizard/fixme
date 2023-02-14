@@ -273,22 +273,37 @@ getFixme h = do
 
 
 makeFixme :: (ByteString, Text) -> Maybe Fixme
-makeFixme (s1, s2') =  fxm <&> over fixmeDynAttr insId .  set fixmeDynAttr attr
+makeFixme (s1, s2') =  fxm <&> over fixmeDynAttr insId
+                             . over fixmeDynAttr insBody
+                             . over fixmeDynAttr insFile
+                             . over fixmeDynAttr insHash
+                             . set  fixmeDynAttr attr
   where
     -- s1 = BS.fromStrict s1'
     fxm  = either (const Nothing) Just $ deserialiseOrFail s1 :: Maybe Fixme
     s2 = BS.fromStrict $ encodeUtf8 s2'
     attr = fromMaybe mempty (Aeson.decode s2) :: HashMap Text Text
+
     insId = case fxm of
       Just e  -> HashMap.insert "id" (fromString $ show $ pretty $ view fixmeId e)
       Nothing -> id
 
+    insBody = case fxm of
+      Just e  -> HashMap.insert "body" (Text.unlines $ view fixmeBody e)
+      Nothing -> id
 
+    insFile = case fxm of
+      Just e  -> HashMap.insert "file" (fromString $ view fixmeFile e)
+      Nothing -> id
+
+    insHash = case fxm of
+      Just e  -> HashMap.insert "blob" (txt $ view fixmeFileGitHash e)
+      Nothing -> id
 
 class MonadIO m => LoadFixme q m  where
   loadFixme :: q -> FixmeState m [Fixme]
 
-data Filt m = forall a . (LoadFixme a m) => Filt a
+data Filt m = forall a . (Show a, Pretty a, LoadFixme a m) => Filt a
 
 instance MonadIO m => LoadFixme (Filt m) m where
   loadFixme (Filt a) = loadFixme a
@@ -369,6 +384,10 @@ instance MonadIO m => LoadFixme [(Text,Text)] m where
 
     let q = HashMap.fromList [ (stripDsl k,v) | (k,v) <- flt', not (Text.isPrefixOf "?" k) ]
 
+    -- liftIO $ print unflt
+    -- liftIO $ print nq
+    -- liftIO $ print q
+
     liftIO $ query conn sql unflt <&> mapMaybe makeFixme
                                   <&> filter (HashMap.isSubmapOf q . view fixmeDynAttr)
                                   <&> invFilt
@@ -380,6 +399,7 @@ instance MonadIO m => LoadFixme [(Text,Text)] m where
       nq = Set.fromList [ (stripDsl k,v) | (k,v) <- flt', Text.isPrefixOf "~" k ]
 
       flt = [ (stripDsl k, v) | (k,v) <- flt', not (Text.isPrefixOf "~" k) ]
+      -- flt = [ (stripDsl k, v) | (k,v) <- flt' ]
 
       stripDsl = Text.dropWhile (\c -> c `elem` "~? \t")
 
