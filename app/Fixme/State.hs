@@ -22,6 +22,7 @@ import Data.HashMap.Strict (HashMap)
 import Data.HashMap.Strict qualified as HashMap
 import Data.Maybe
 import Data.String
+import Data.Set qualified as Set
 import Data.Text.Encoding (encodeUtf8)
 import Data.Text qualified as Text
 import Data.Text (Text)
@@ -333,11 +334,14 @@ instance MonadIO m => LoadFixme [Text] m where
 
       cnd = fmap (<> "%") cnd'
 
+-- TODO: better query DSL processing
 
 instance MonadIO m => LoadFixme [(Text,Text)] m where
   loadFixme [] = pure mempty
 
-  loadFixme flt = do
+  loadFixme flt' | null flt = loadFixme @[Text] mempty <&> invFilt
+
+                 | otherwise = do
 
     conn <- asks (view fixmeEnvDb)
 
@@ -361,16 +365,23 @@ instance MonadIO m => LoadFixme [(Text,Text)] m where
     |]
 
 
-    let unflt = mconcat [ [stripDsl k,v] | (k,v) <- flt ]
+    let unflt = mconcat [ [stripDsl k,v] | (k,v) <- flt', not (Text.isPrefixOf "~" k) ]
 
-    -- "and" part of the query
-    let q = HashMap.fromList [ (k,v) | (k,v) <- flt, not (Text.isPrefixOf "?" k) ]
+    let q = HashMap.fromList [ (stripDsl k,v) | (k,v) <- flt', not (Text.isPrefixOf "?" k) ]
 
     liftIO $ query conn sql unflt <&> mapMaybe makeFixme
                                   <&> filter (HashMap.isSubmapOf q . view fixmeDynAttr)
+                                  <&> invFilt
 
     where
-      stripDsl = Text.dropWhile (\c -> c `elem` "? \t")
+
+      invFilt fme = filter (\x -> Set.null $ Set.fromList (HashMap.toList (view fixmeDynAttr x)) `Set.intersection` nq) fme
+
+      nq = Set.fromList [ (stripDsl k,v) | (k,v) <- flt', Text.isPrefixOf "~" k ]
+
+      flt = [ (stripDsl k, v) | (k,v) <- flt', not (Text.isPrefixOf "~" k) ]
+
+      stripDsl = Text.dropWhile (\c -> c `elem` "~? \t")
 
 listAttrs :: MonadIO m => FixmeState m [Text]
 listAttrs = do
