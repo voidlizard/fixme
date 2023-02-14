@@ -200,13 +200,19 @@ fixme-id-show-len 10
   (post builtin:columns | 10 10 8 10 _)
 
 ;; postprocessor
+
 ;; post postprocessor args
+
 ;; right now it's only builtin:columns
+
 ;; args are: delim col-width*
+
 ;; _ means left the columns as is
 ;; only the enumerated colums will be displayed,
+
 ;; i.e if there is less args that colums in the output,
 ;; remaining colums will be dropped.
+
 ;; use _ to enumerate a column
 
   (query ~workflow:backlog)
@@ -229,9 +235,24 @@ fixme-id-show-len 10
   (query ?workflow:wip)
   (query ?workflow:fixed)
 ]
+```
 
+## Reports
+
+Report is a fixed query + template. It may be set up
+with fixme-report statement in .fixme/config.
+
+See the examples above.
+
+Report may be executed by
 
 ```
+fixme report report-id queries*
+```
+queries\* are optional extra clauses
+for the report.
+
+
 ## Local config
 
 There is also an optional local config
@@ -422,10 +443,18 @@ will print all fixmies with assigned == 'Alice' and workflow == 'wip'
 
 ### How to display all attributes set for a fixme?
 
-Should be done as well.
+1. Define a report, like
 
-FIXME: gather-all-attributes-on-fixme-load
-  Indeed
+```
+cat >> .fixme/config
+[ fixme-report wip-json json
+]
+^D
+
+fixme report wip-json
+```
+
+and see json with all loaded attributes.
 
 ### There are many attempts of making "distributed" and "git-oriented" trackers. Why another one?
 
