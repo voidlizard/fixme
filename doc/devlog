@@ -5,6 +5,11 @@ TODO: rework-list-to-user-reports
 
 TODO: fixme-meta-commiters-command
 
+TODO: limit-blob-scanning-depth
+
+  use --since or other way to limit
+  scanning in order to make it work
+  faster on older projects.
 
 ## 2023-02-10
 
