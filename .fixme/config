@@ -34,10 +34,12 @@ fixme-value-set workflow new backlog wip test fixed done
   (post builtin:columns | 10 8 8 10 _)
 ]
 
-[ fixme-report test json
+[ fixme-report wip json
   (render builtin:microstache report-wip.tpl)
   (post builtin:columns | 10 8 8 10 _)
-  (query workflow:test)
+  (query ?workflow:test)
+  (query ?workflow:wip)
+  (query ?workflow:fixed)
 ]
 
 [ fixme-report wip-json json

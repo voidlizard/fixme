@@ -361,14 +361,16 @@ instance MonadIO m => LoadFixme [(Text,Text)] m where
     |]
 
 
-    let unflt = mconcat [ [k,v] | (k,v) <- flt ]
+    let unflt = mconcat [ [stripDsl k,v] | (k,v) <- flt ]
 
-    let q = HashMap.fromList flt
+    -- "and" part of the query
+    let q = HashMap.fromList [ (k,v) | (k,v) <- flt, not (Text.isPrefixOf "?" k) ]
 
     liftIO $ query conn sql unflt <&> mapMaybe makeFixme
                                   <&> filter (HashMap.isSubmapOf q . view fixmeDynAttr)
 
-
+    where
+      stripDsl = Text.dropWhile (\c -> c `elem` "? \t")
 
 listAttrs :: MonadIO m => FixmeState m [Text]
 listAttrs = do
