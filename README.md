@@ -161,7 +161,7 @@ fixme-prefix     FIXME:   bugs issues
 fixme-prefix     TODO:    bugs issues
 
 ;; file mask to search fixmies.
-;; Althought only git blobs scanned, it makes sense
+;; Although only git blobs scanned, it makes sense
 ;; to filter the blobs for scanning.
 
 fixme-files **/*.hs
@@ -228,6 +228,14 @@ fixme-id-show-len 10
 ]
 
 ;; another example
+;; defines the report with name "wip"
+;; that outputs fixmies having
+;; attribute worflow = test or wip or fixed
+;; assuming that report-wip.tpl generates
+;; columns separated by '|' character
+;; and sets column widths to 10, 10, 8, 10 and whatever
+
+
 [ fixme-report wip json
   (render builtin:microstache report-wip.tpl)
   (post builtin:columns | 10 10 8 10 _)
