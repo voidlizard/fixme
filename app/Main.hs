@@ -276,15 +276,16 @@ runCat h mbefore mafter = do
     let num   = bef + self + aft
     let from  = max 0 ( fxm ^. fixmeLine - bef - 1)
 
-    let feat = HighlightFixmeBegin (bef + 1)
-
-    pager <- getPager feat fxm cfg
 
     -- FIXME: check of file is really big
     --   use streaming instead of LBS(?)
     o <- gitReadObject (view fixmeFileGitHash fxm)
 
+    let feat = HighlightFixmeBegin (min (fxm ^. fixmeLine) (bef+1))
+
     let ls = take num $ drop from $ LBS.lines o
+
+    pager <- getPager feat fxm cfg
 
     -- FIXME: use-pager-with-colors!
     --   or temporaty file?
