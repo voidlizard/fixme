@@ -2,7 +2,7 @@
 description = "fixme: trackerless issue managament";
 
 inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     haskell-flake-utils.url = "github:ivanovs-4/haskell-flake-utils";
     suckless-conf.url = "github:voidlizard/suckless-conf";
 };
