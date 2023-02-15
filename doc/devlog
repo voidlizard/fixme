@@ -1,5 +1,8 @@
 ## 2023-02-15
 
+FIXME: end-of-todo-line-marker
+  to not read block comments closing characters
+
 FIXME: default-config-does-not-work
 
 
