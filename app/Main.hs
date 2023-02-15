@@ -253,6 +253,11 @@ runUpdate opt = do
       sequence_ (mconcat merges)
 
 
+newtype HighlightFixmeBegin = HighlightFixmeBegin Int
+
+instance PagerFeatures HighlightFixmeBegin where
+  pagerHighlightRow (HighlightFixmeBegin x) = Just x
+
 runCat :: FixmeHash -> Maybe Int -> Maybe Int -> IO ()
 runCat h mbefore mafter = do
   e <- newFixmeEnv
@@ -271,7 +276,9 @@ runCat h mbefore mafter = do
     let num   = bef + self + aft
     let from  = max 0 ( fxm ^. fixmeLine - bef - 1)
 
-    pager <- getPager fxm cfg
+    let feat = HighlightFixmeBegin (bef + 1)
+
+    pager <- getPager feat fxm cfg
 
     -- FIXME: check of file is really big
     --   use streaming instead of LBS(?)

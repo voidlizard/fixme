@@ -13,10 +13,18 @@ import System.Directory
 import Prettyprinter
 import Lens.Micro.Platform
 import Data.List qualified as L
+import Data.Maybe
 import Safe
 
 newtype LocalConfig = LocalConfig [Syntax C]
                       deriving newtype (Monoid, Semigroup)
+
+
+class PagerFeatures a where
+  pagerHighlightRow :: a -> Maybe Int
+  pagerHighlightRow _ = Nothing
+
+instance PagerFeatures ()
 
 getLocalConfig :: MonadIO m => m LocalConfig
 getLocalConfig = liftIO do
@@ -42,8 +50,8 @@ getLocalConfig = liftIO do
     pure (LocalConfig conf)
 
 
-getPager :: MonadIO m => Fixme -> LocalConfig -> m (Maybe String)
-getPager fxm (LocalConfig cfg) = do
+getPager :: (MonadIO m, PagerFeatures ft) => ft -> Fixme -> LocalConfig -> m (Maybe String)
+getPager ft fxm (LocalConfig cfg) = do
   -- liftIO $ print $ pretty cfg
 
   let ext = dropWhile (== '.') $ takeExtension (fxm ^. fixmeFile)
@@ -56,7 +64,8 @@ getPager fxm (LocalConfig cfg) = do
     [] -> Nothing
 
     ("bat":args) -> do
-      let fname = [qc|--file-name {view fixmeFile fxm}|] :: String
+      let hi = maybe1 (pagerHighlightRow ft) mempty \r -> [qc|-H {r}|] :: String
+      let fname = [qc|{hi} --file-name {view fixmeFile fxm}|] :: String
       Just [qc|bat {fname} {unwords args}|]
 
     xs -> Just $ unwords xs
