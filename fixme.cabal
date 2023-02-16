@@ -89,7 +89,6 @@ executable fixme
                    , filepath
                    , filepattern
                    , interpolatedstring-perl6
-                   , matrices
                    , memory
                    , microlens-platform
                    , microstache
@@ -103,7 +102,6 @@ executable fixme
                    , text
                    , text-ansi
                    , transformers
-                   , trie-simple
                    , typed-process
                    , uniplate
                    , unordered-containers

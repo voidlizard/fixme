@@ -12,24 +12,18 @@ import Data.Aeson
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.ByteString.Lazy qualified as BS
 import Data.Function
--- import Data.Functor
 import Data.Text qualified as Text
 import qualified Data.Text.Lazy.IO as TIO
 import qualified Data.Text.Lazy as LT
 import Lens.Micro.Platform hiding ((.=))
-import Prettyprinter
 import Safe
 import System.Directory
 import System.FilePath
 import Text.Microstache hiding (Key)
 import Data.HashMap.Strict (HashMap)
-import System.IO
 import System.Exit
 import Text.InterpolatedString.Perl6 (qc,q)
 import Data.Maybe
-import Text.ANSI qualified as ANSI
-
-import Data.Matrix qualified as M
 
 newtype Report = Report { items :: [HashMap Text Text] }
                  deriving stock (Generic)
