@@ -157,8 +157,10 @@ runUpdate opt = do
 
     let allowedVal k v = isAllowedVal k v (allowedValues r)
 
+    let exclude = ignored r
+
     let fpat (_,f) =  or [ x ?== f | x <- masks r ]
-                   && not ((\xs -> not (null xs) && and xs) [ x ?== f | x <- ignored r] )
+                   && (null exclude || not ( and [ x ?== f | x <- exclude] ))
 
     blobz <- gitListAllBlobs <&> List.nubBy ((==) `on` fst)
                  >>= filterM ( \(h,_) -> blobProcessed h <&> not)
