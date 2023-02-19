@@ -1,5 +1,14 @@
 ## 2023-02-19
 
+
+TODO: move-attributes-on-merge
+  При merge все атрибуты старого fixme
+  должны переезжать в новый fixme
+  ```
+   update fixmeattr set id = :new-fixme-id where id = :old-fixme-id
+  ```
+
+
 TODO: log-play-optimization-3
   Ввести операцию trim над логом. Операция trim
   очищает лог, и первой командой лога ставит fixme-log-prev
