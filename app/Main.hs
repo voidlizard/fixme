@@ -14,6 +14,7 @@ import Fixme.RunListAttribs
 import Fixme.RunReport
 import Fixme.Config
 import Fixme.LocalConfig
+import Paths_fixme (version)
 
 import Data.Config.Suckless
 
@@ -37,6 +38,7 @@ import Data.Text.IO qualified as Text
 import Data.Text qualified as Text
 import Data.Text (Text)
 import Data.UUID.V4 as UUID
+import Data.Version (showVersion)
 import Lens.Micro.Platform
 import Options.Applicative hiding (Parser)
 import Options.Applicative qualified as O
@@ -416,12 +418,17 @@ withState m = do
 
 main :: IO ()
 main = join . customExecParser (prefs showHelpOnError) $
-  info (helper <*> parser)
+  info (helper <*> versionOption <*> parser)
   (  fullDesc
-  <> header "fixme"
+  <> header ("fixme " <> ver)
   <> progDesc "trackerless issue management"
   )
   where
+    ver = "v" <> showVersion version
+
+    versionOption :: O.Parser (a -> a)
+    versionOption = infoOption ver (long "version" <> short 'v' <> help "Show version" <> hidden)
+
     parser ::  O.Parser (IO ())
     parser = hsubparser (  command "init"    (info pInit   (progDesc "init fixme config"))
                         <> command "update"  (info pUpdate (progDesc "update state"))
