@@ -50,6 +50,8 @@ import System.Process.Typed
 import Text.InterpolatedString.Perl6 (qc)
 import Data.HashMap.Strict qualified as HashMap
 
+-- TODO: check-haskell-comment-still-works
+
 
 newtype ScanOpt =
   ScanOpt
