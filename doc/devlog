@@ -1,5 +1,7 @@
 ## 2023-02-22
 
+TODO: print-fixme-version-from-cabal
+
 TODO: generate-gitignore-by-default
  Generate .gitignore file with
  "state.db" in .fixme/config by default (fixme init)

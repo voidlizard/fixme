@@ -10,6 +10,7 @@ import Data.Set qualified as Set
 import Data.Set (Set)
 import Data.Text qualified as Text
 import Data.Text (Text)
+import Data.Maybe
 import Prettyprinter
 import Safe
 
@@ -38,9 +39,9 @@ comm r =
           | (ListVal @C (Key "fixme-comments" fs) ) <- r
           ]
 
-pref :: IsString b => [Syntax C] -> [b]
-pref r =
-  mconcat [ fmap (fromString.show.pretty) fs
+pref :: [Syntax C] -> [Text]
+pref r = catMaybes $
+          [ fmap asText (headMay fs)
           | (ListVal @C (Key "fixme-prefix" fs) ) <- r
           ]
 
