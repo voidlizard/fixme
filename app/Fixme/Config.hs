@@ -13,6 +13,13 @@ import Data.Text (Text)
 import Prettyprinter
 import Safe
 
+asText :: Syntax c -> Text
+asText = \case
+  LitStrVal x -> x
+  LitIntVal x -> Text.pack $ show x
+  SymbolVal (Id x)  -> x
+  e -> Text.pack (show $ pretty e)
+
 masks :: [Syntax C] -> [String]
 masks r =
   mconcat [ fmap (show.pretty) fs
@@ -25,9 +32,9 @@ ignored r =
           | (ListVal @C (Key "fixme-files-ignore" fs) ) <- r
           ]
 
-comm :: IsString b => [Syntax C] -> [b]
+comm :: [Syntax C] -> [Text]
 comm r =
-  mconcat [ fmap (fromString.show.pretty) fs
+  mconcat [ fmap asText fs
           | (ListVal @C (Key "fixme-comments" fs) ) <- r
           ]
 
