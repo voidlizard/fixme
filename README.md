@@ -441,7 +441,7 @@ fixme report wip-json
 
 and see json with all loaded attributes.
 
-### There are many attempts of making \"distributed\" and \"git-oriented\" trackers. Why another one? {#there-are-many-attempts-of-making-distributed-and-git-oriented-trackers-why-another-one}
+### There are many attempts of making \"distributed\" and \"git-oriented\" trackers. Why another one?
 
 They (IMO) are all failed. git-bug is the best of them, however it\'s
 approach to make a separate reference for each issue is not viable.
@@ -521,7 +521,7 @@ all sexps.
 
 Done
 
-### I need feature X. {#i-need-feature-x}
+### I need feature X
 
 Let me know! Feedback is appreciated.
 
