@@ -159,7 +159,7 @@ following options:
 
     ;; claims the line comment symbols. there are may be some.
 
-    fixme-comments   // # --
+    fixme-comments   // # "--"
 
     ;; prefixes or tags of fixmies. There are might be some.
     ;; "bugs" , "issues" are categories of fixmies
@@ -371,15 +371,25 @@ option to tell fixme what files to scan.
 
 Make sure it also has
 
-    fixme-comments   // # --
+    fixme-comments   // # "--"
 
 section and it has comment prefixes for you language. If you want to use
 \';\' characters in comments, use double quotes \";\".
+
+Note, that symbols can't starr from "-" (minus), cause it's a negative
+number prefix. So enclose them into double quotes as well.
 
 also make sure it has something like
 
 ```
 fixme-prefix     FIXME:   bugs issues
+```
+
+"bugs" and "issued" are categories of FIXME, right now
+it's not supported and may be ommited:
+
+```
+fixme-prefix     FIXME:
 ```
 
 Create a FIXME: entry somewhere in project. Example:
