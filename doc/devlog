@@ -1,6 +1,11 @@
 
 ## 2023-02-25
 
+TODO: fixme-update-before-report
+  Делать fixme update автоматически перед report/list,
+  запоминать некий тег или хэш (лог+конфиг+значение всех голов
+  репозитория), что бы не делать fixme update повторно.
+
 TODO: attributes-specific-for-tag
   Сделать атрибуты, специфичные для конкретного
   тега.
