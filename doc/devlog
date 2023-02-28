@@ -1,4 +1,19 @@
 
+## 2023-02-28
+
+TODO: macro-command
+  Сделать макрокоманды, так, что бы можно было, например
+  вместо
+
+  ```
+  fixme set workflow backlog XXXX
+  ```
+  делать
+  ```
+  fixme backlog XXXX
+  ```
+
+
 ## 2023-02-26
 
 TODO: fixme-set-attribute
