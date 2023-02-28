@@ -70,6 +70,11 @@ withConn m = do
 runFixmeState :: MonadIO m => FixmeEnv -> FixmeState m a -> m a
 runFixmeState env m = runReaderT ( fromFixmeState m ) env
 
+withState :: IO a -> IO a
+withState m = do
+  e <- newFixmeEnv
+  runFixmeState e initState
+  m
 
 initState :: MonadIO m => FixmeState m ()
 initState = do

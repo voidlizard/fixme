@@ -72,6 +72,8 @@ executable fixme
       Fixme.LocalConfig
       Fixme.RunListAttribs
       Fixme.RunReport
+      Fixme.RunLog
+      Fixme.RunLogMacro
       Paths_fixme
 
     -- other-extensions:

@@ -3,6 +3,7 @@ module Fixme.Prelude
   , module Fixme.OrDie
   , module Data.Default
   , module GHC.Generics
+  , module Prettyprinter
   , IsString(..)
   , Text
   , maybe1

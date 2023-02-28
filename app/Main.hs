@@ -14,6 +14,8 @@ import Fixme.RunListAttribs
 import Fixme.RunReport
 import Fixme.Config
 import Fixme.LocalConfig
+import Fixme.RunLog
+import Fixme.RunLogMacro
 import Paths_fixme (version)
 
 import Data.Config.Suckless
@@ -98,12 +100,6 @@ runUuid = do
   print $ pretty "uuid:" <+> pretty (show uuid)
 
 
-runLog :: Bool -> String -> IO ()
-runLog dry s = withState do
-  print (pretty s)
-  unless dry do
-    appendFile logFile "\n"
-    appendFile logFile s
 
 runList :: ListOpts -> IO ()
 runList opt = do
@@ -410,11 +406,6 @@ calcIndent txt = sum (fmap f s)
         | c == '\t' = 4
         | otherwise = 0
 
-withState :: IO a -> IO a
-withState m = do
-  e <- newFixmeEnv
-  runFixmeState e initState
-  m
 
 main :: IO ()
 main = join . customExecParser (prefs showHelpOnError) $
@@ -442,6 +433,8 @@ main = join . customExecParser (prefs showHelpOnError) $
                         <> command "meta"    (info (hsubparser pMeta) (progDesc "metadata commands") )
                         <> command "scan"    (info pUpdate (progDesc "obsolete; use update"))
                         )
+              <|> pLogMacro
+
     pInit = do
       pure runInit
 
@@ -508,4 +501,9 @@ main = join . customExecParser (prefs showHelpOnError) $
     pReport = do
       args <- many $ strArgument ( metavar "REPORT-NAME" )
       pure $ withState $ runReport args Nothing
+
+
+    pLogMacro = do
+      args <- some $ strArgument ( metavar "MACRO-ARGS" )
+      pure $ runLogMacro args
 

@@ -60,3 +60,12 @@ fixme-value-set asap asap
 [ fixme-report wip-json json
 ]
 
+fixme-log-macro backlog (fixme-set "workflow" "backlog" "$1")
+fixme-log-macro test    (fixme-set "workflow" "test" "$1")
+fixme-log-macro wip     (fixme-set "workflow" "wip" "$1")
+fixme-log-macro assign  (fixme-set "assigned" "$1" "$2")
+
+
+
+
+
