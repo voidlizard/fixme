@@ -1,4 +1,10 @@
 
+## 2023-03-01
+
+TODO: seek-fixme-state-in-upper-level-directories
+  Искать .fixme выше по дереву, но но выше, чем
+  ближайший .git
+
 ## 2023-02-28
 
 TODO: macro-command
