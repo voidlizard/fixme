@@ -70,6 +70,7 @@ instance Default FmtAttr where
 
 data Format a = Brief FmtAttr a
 
+-- TODO: title-width-hardcode-to-config?
 instance Pretty (Format Fixme) where
   pretty (Brief fmt f) =   tp <> pretty shortId
                        <+> fill w (pretty (view fixmeTag f))
