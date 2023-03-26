@@ -195,9 +195,10 @@ runUpdate opt = do
   cfgFile <- readFile confFile
   currentLog <- readFile logFile
 
+  raw <- getGitCommitsForFileRaw logFile
   logs <- getGitCommitsForFile logFile
 
-  let mark = fixmeHash $ serialise logs
+  let mark = fixmeHash raw
 
   e <- newFixmeEnv
   runFixmeState e initState
