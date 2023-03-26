@@ -119,6 +119,12 @@ initState = do
                                    , primary key (rev,id,attr) );
                      |]
 
+    execute_ conn [qc| create table if not exists
+                       logprocessed ( hash text not null primary key
+                                    )
+                     |]
+
+
 transaction :: forall m a . MonadIO m => FixmeState IO a -> FixmeState m a
 transaction m = do
   conn <- asks (view fixmeEnvDb)
@@ -143,6 +149,32 @@ blobProcessed h = do
 
   let sql = [qc|
   select null from blob where hash = ? limit 1
+  |]
+
+  liftIO $ query @_ @[Maybe Bool] conn sql (Only h) <&> not . null
+
+
+setLogProcessed :: MonadIO m => GitHash -> FixmeState m ()
+setLogProcessed h = do
+  conn <- asks (view fixmeEnvDb)
+
+  here <- blobProcessed h
+
+  unless here do
+
+    let sql = [qc|
+     insert into logprocessed (hash) values(?)
+     on conflict (hash) do nothing
+    |]
+
+    liftIO $ execute conn sql (Only h)
+
+logProcessed :: MonadIO m => GitHash -> FixmeState m Bool
+logProcessed h = do
+  conn <- asks (view fixmeEnvDb)
+
+  let sql = [qc|
+  select null from logProcessed where hash = ? limit 1
   |]
 
   liftIO $ query @_ @[Maybe Bool] conn sql (Only h) <&> not . null

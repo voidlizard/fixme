@@ -1,5 +1,6 @@
 module Fixme.Git where
 
+import Control.Monad
 import Codec.Serialise
 import Data.Function
 import Control.Monad.IO.Class
@@ -18,6 +19,9 @@ import Data.Text.Encoding qualified as Enc
 import Data.Text.Encoding.Error (ignore)
 import Data.Text qualified as Text
 import Lens.Micro.Platform
+import Safe
+import Data.Maybe
+import Data.List (sortOn)
 
 newtype GitBlob a = Blob a
 
@@ -70,4 +74,19 @@ gitListAllBlobs = do
 gitReadObject :: MonadIO m => GitHash -> m LBS.ByteString
 gitReadObject h = do
   readProcess (shell [qc|git cat-file blob {pretty h}|]) <&> view _2
+
+gitReadFileFrom :: MonadIO m => GitHash -> FilePath -> m LBS.ByteString
+gitReadFileFrom co fp = do
+  readProcess (shell [qc|git show {pretty co}:{fp}|]) <&> view _2
+
+getGitCommitsForFile :: MonadIO m => FilePath -> m [(Integer, GitHash)]
+getGitCommitsForFile fp = do
+  let cmd = shell [qc|git log --all --follow --pretty=format:"%ad %H" --date=unix -- {fp}|]
+  (_,output,_) <- readProcess cmd
+  pure $ sortOn fst $
+    flip mapMaybe (LBS.words <$> LBS.lines output) $ \case
+          [t,co] -> (,) <$> readMay (LBS.unpack t)
+                  <*> pure (fromString (LBS.unpack co))
+          _ -> Nothing
+
 
