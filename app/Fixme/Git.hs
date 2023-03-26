@@ -79,15 +79,13 @@ gitReadFileFrom :: MonadIO m => GitHash -> FilePath -> m LBS.ByteString
 gitReadFileFrom co fp = do
   readProcess (shell [qc|git show {pretty co}:{fp}|]) <&> view _2
 
-getGitCommitsForFile :: MonadIO m => FilePath -> m [(Integer, GitHash)]
-getGitCommitsForFile fp = do
-  output <- getGitCommitsForFileRaw fp
+getGitCommitsForBlob :: MonadIO m => LBS.ByteString -> m [(Integer, GitHash)]
+getGitCommitsForBlob lbs = do
   pure $ sortOn fst $
-    flip mapMaybe (LBS.words <$> LBS.lines output) $ \case
+    flip mapMaybe (LBS.words <$> LBS.lines lbs) $ \case
           [t,co] -> (,) <$> readMay (LBS.unpack t)
                   <*> pure (fromString (LBS.unpack co))
           _ -> Nothing
-
 
 getGitCommitsForFileRaw :: MonadIO m => FilePath -> m LBS.ByteString
 getGitCommitsForFileRaw fp = do

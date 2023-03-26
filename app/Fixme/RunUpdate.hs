@@ -196,7 +196,7 @@ runUpdate opt = do
   currentLog <- readFile logFile
 
   raw <- getGitCommitsForFileRaw logFile
-  logs <- getGitCommitsForFile logFile
+  logs <- getGitCommitsForBlob raw
 
   let mark = fixmeHash raw
 
