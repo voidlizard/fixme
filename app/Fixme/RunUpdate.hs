@@ -197,23 +197,28 @@ runUpdate opt = do
 
   logs <- getGitCommitsForFile logFile
 
+  let mark = fixmeHash $ serialise logs
+
   e <- newFixmeEnv
+  runFixmeState e initState
+
+  done <- runFixmeState e $ stateProcessed mark
 
   -- FIXME: better error handling
   r <- pure (parseTop cfgFile) `orDie` "can't parse config"
 
-  runFixmeState e initState
+  unless done do
+    for_ logs $ \(_,co) -> do
+      here <- runFixmeState e $ logProcessed co
 
-  es <- forM logs $ \(_,co) -> do
-    here <- runFixmeState e $ logProcessed co
+      unless here do
+        -- liftIO $ print $ "processing log from" <+> pretty co
+        ldata <- gitReadFileFrom co logFile
+        -- FIXME: show-diagnostics
+        let lo = parseTop (LBS.unpack ldata) & fromRight mempty
+        processLog opt r e (Just co) lo
 
-    unless here do
-      -- liftIO $ print $ "processing log from" <+> pretty co
-      ldata <- gitReadFileFrom co logFile
-      -- FIXME: show-diagnostics
-      let lo = parseTop (LBS.unpack ldata) & fromRight mempty
-      processLog opt r e (Just co) lo
-    pure co
+  runFixmeState e $ setStateProcessed mark
 
   let lo = parseTop currentLog & fromRight mempty
 
@@ -233,6 +238,7 @@ runUpdate opt = do
   -- print $ vcat (fmap pretty lo)
 
   processLog opt r e Nothing lastLog
+
 
 parseBlob :: FixmeDef
           -> (GitHash, FilePath)
