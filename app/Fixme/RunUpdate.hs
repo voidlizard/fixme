@@ -209,7 +209,7 @@ runUpdate opt = do
   r <- pure (parseTop cfgFile) `orDie` "can't parse config"
 
   unless done do
-    for_ logs $ \(_,co) -> do
+    forConcurrently_ logs $ \(_,co) -> do
       here <- runFixmeState e $ logProcessed co
 
       unless here do
