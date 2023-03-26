@@ -14,13 +14,16 @@ import Data.Config.Suckless
 import Data.Config.Suckless.Syntax
 
 import Prelude hiding (log)
+import Control.Monad.Trans.Maybe
+import Control.Exception
+import Control.Monad.Except (runExceptT,runExcept)
 import Text.InterpolatedString.Perl6 (qc)
 import Codec.Serialise
 import Control.Applicative
 import Control.Concurrent.Async
 import Control.Monad
 import Control.Monad.IO.Class (liftIO,MonadIO)
-import Data.Attoparsec.Text hiding (option,take)
+import Data.Attoparsec.Text hiding (option,take,try)
 import Data.Attoparsec.Text qualified as Atto
 import Data.ByteString.Lazy.Char8 qualified as LBS
 import Data.Foldable(for_)
@@ -112,50 +115,59 @@ processLog opt r e mbCo log = do
     -- FIXME: to-play-log-function
 
 
-      run <- forM attrs $ \(i,a,v) -> do
-        ii <- findId i
+      run <- forM attrs $ \(i',a,v) -> do
+        ii <- findId i'
 
-        let valid = allowedName a && allowedVal a v
+        runMaybeT $ do
 
-        unless (allowedVal a v) do
-          liftIO $ hPrint stderr $ "*** warn: value" <+> pretty v
-                                                      <+> "not allowed for"
-                                                      <+> pretty a
+          i <- MaybeT $ pure $ fromStringMay i'
 
-        unless (allowedName a) do
-          liftIO $ hPrint stderr $ "*** warn: attrib name" <+> pretty a
-                                                            <+> pretty "not allowed"
+          let valid = allowedName a && allowedVal a v
 
-        case ii of
-           [x] | valid     -> pure [ setAttr Nothing x a v ]
-               | otherwise -> pure []
-           []  | valid     -> pure [ setAttr Nothing (fromString i) a v ]
-               | otherwise -> pure []
+          unless (allowedVal a v) do
+            liftIO $ hPrint stderr $ "*** warn: value" <+> pretty v
+                                                        <+> "not allowed for"
+                                                        <+> pretty a
 
-           _   -> do
-             liftIO $ hPrint stderr $ "fixme-set:"
-                                         <+> pretty ii
-                                         <+> "is ambiguous, ignored"
-             pure mempty
+          unless (allowedName a) do
+            liftIO $ hPrint stderr $ "*** warn: attrib name" <+> pretty a
+                                                              <+> pretty "not allowed"
 
-      unless ( opt ^. scanDontAdd ) do
-        sequence_ (mconcat run)
+          case ii of
+             [x] | valid     -> pure [ setAttr Nothing x a v ]
+                    | otherwise -> pure []
 
+             []     | valid     -> pure [ setAttr Nothing i a v ]
+                    | otherwise -> pure []
 
-      del <- forM deleted $ \i -> do
-        ii <- findId i
-
-        case ii of
-           [x] -> pure [ setDeleted x ]
-           []  -> pure [ setDeleted (fromString i) ]
-           _   -> do
-             liftIO $ hPrint stderr $ "fixme-del:"
-                                         <+> pretty i
-                                         <+> "is ambiguous, ignored"
-             pure mempty
+             _   -> do
+               liftIO $ hPrint stderr $ "fixme-set:"
+                                           <+> pretty ii
+                                           <+> "is ambiguous, ignored"
+               pure mempty
 
       unless ( opt ^. scanDontAdd ) do
-        sequence_ (mconcat del)
+        sequence_ (mconcat (catMaybes run))
+
+
+      del <- forM deleted $ \i' -> do
+        ii <- findId i'
+
+        runMaybeT $ do
+
+          i <- MaybeT $ pure $ fromStringMay i'
+
+          case ii of
+             [x] -> pure [ setDeleted x ]
+             []  -> pure [ setDeleted i ]
+             _   -> do
+               liftIO $ hPrint stderr $ "fixme-del:"
+                                           <+> pretty i
+                                           <+> "is ambiguous, ignored"
+               pure mempty
+
+      unless ( opt ^. scanDontAdd ) do
+        sequence_ (mconcat (catMaybes del))
 
     merges <- forM merged $ \(a,b) -> do
                 aId <- findId a

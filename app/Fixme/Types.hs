@@ -6,6 +6,11 @@ import Fixme.Git
 import Fixme.Hash
 import Data.Config.Suckless
 
+import Control.Exception
+import Data.String
+import Control.Monad.Except (runExceptT,runExcept)
+import Control.Exception (SomeException, try)
+import Data.String (fromString)
 import Data.Default
 import Codec.Serialise
 import Data.HashMap.Strict (HashMap)
@@ -86,4 +91,8 @@ instance Pretty (Format Fixme) where
 
 
 instance Serialise Fixme
+
+
+
+
 

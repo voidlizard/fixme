@@ -25,6 +25,15 @@ class HasFixmeHash a where
 instance Pretty FixmeHash where
   pretty (FixmeHash h) = pretty (AsBase58 h)
 
+
+class FromStringMaybe a where
+  fromStringMay :: String -> Maybe a
+
+instance FromStringMaybe FixmeHash where
+  fromStringMay s = FixmeHash <$> doDecode
+    where
+      doDecode = fromBase58 (BS8.pack s)
+
 instance IsString FixmeHash where
   fromString s = FixmeHash doDecode
     where
