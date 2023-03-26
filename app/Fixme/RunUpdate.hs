@@ -217,7 +217,9 @@ runUpdate opt = do
 
   let lo = parseTop currentLog & fromRight mempty
 
-  llog <- maybe1 (lastMay es) (pure mempty) $ \co -> do
+  let ll = lastMay logs <&> snd
+
+  llog <- maybe1 ll (pure mempty) $ \co -> do
            gitReadFileFrom co logFile <&> LBS.unpack
                                       <&> parseTop
                                       <&> fromRight mempty
