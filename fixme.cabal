@@ -70,6 +70,7 @@ executable fixme
       Fixme.Prelude
       Fixme.Types
       Fixme.LocalConfig
+      Fixme.RunUpdate
       Fixme.RunListAttribs
       Fixme.RunReport
       Fixme.RunLog
