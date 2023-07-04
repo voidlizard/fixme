@@ -50,6 +50,10 @@ instance HasGitHash (GitBlob LBS.ByteString) where
 -- FIXME: check-return-code
 --   (uuid e0aed358-6757-4054-803c-3cd8066fd7cd)
 --
+-- FIXME: git-pre-v2.32.0-error
+--   "--filter=object:type=blob" works only with git v2.32.0 and above.
+--   for example, it does not work on Ubuntu 20.04, but works on Ubuntu 22.04
+--
 gitListAllBlobs :: MonadIO m => m [(GitHash, FilePath)]
 gitListAllBlobs = do
   let cmd = [qc|git rev-list --objects  --all --in-commit-order --filter=object:type=blob|]
