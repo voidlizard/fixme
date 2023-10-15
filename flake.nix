@@ -5,6 +5,7 @@ inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     haskell-flake-utils.url = "github:ivanovs-4/haskell-flake-utils";
     suckless-conf.url = "github:voidlizard/suckless-conf";
+    suckless-conf.inputs.nixpkgs.follows = "nixpkgs";
 };
 
 outputs = { self, nixpkgs, haskell-flake-utils, ... }@inputs:

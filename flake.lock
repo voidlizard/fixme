@@ -68,31 +68,16 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1676209454,
-        "narHash": "sha256-alj9mBkV9U6tTPDK026671D2pesLSYZZc9j5dBZJ9f0=",
+        "lastModified": 1697009197,
+        "narHash": "sha256-viVRhBTFT8fPJTb1N3brQIpFZnttmwo3JVKNuWRVc3s=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "8c619a1f3cedd16ea172146e30645e703d21bfc1",
+        "rev": "01441e14af5e29c9d27ace398e6dd0b293e25a54",
         "type": "github"
       },
       "original": {
         "owner": "NixOS",
         "ref": "nixpkgs-unstable",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
-    "nixpkgs_2": {
-      "locked": {
-        "lastModified": 1675758091,
-        "narHash": "sha256-7gFSQbSVAFUHtGCNHPF7mPc5CcqDk9M2+inlVPZSneg=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "747927516efcb5e31ba03b7ff32f61f6d47e7d87",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
         "repo": "nixpkgs",
         "type": "github"
       }
@@ -107,14 +92,16 @@
     "suckless-conf": {
       "inputs": {
         "haskell-flake-utils": "haskell-flake-utils_2",
-        "nixpkgs": "nixpkgs_2"
+        "nixpkgs": [
+          "nixpkgs"
+        ]
       },
       "locked": {
-        "lastModified": 1679815688,
-        "narHash": "sha256-xLvIoeG5krM0CXfWRcwSgHGP7W8i8dsoKP5hUb182hE=",
+        "lastModified": 1697354514,
+        "narHash": "sha256-5doedGj2QU4vPuw1VZor1GGEJTxu0zFeO/PsybFIcn8=",
         "owner": "voidlizard",
         "repo": "suckless-conf",
-        "rev": "04c432681d3627f180a402674523736f409f964d",
+        "rev": "3f87278bc10ac4f14a6d9d2c75cbbed228509129",
         "type": "github"
       },
       "original": {
