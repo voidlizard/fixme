@@ -1,7 +1,6 @@
 module Fixme.RunLogMacro where
 
 import Fixme.Prelude
-import Fixme.Types
 import Fixme.Defaults
 import Fixme.RunLog
 import Data.Config.Suckless
@@ -12,7 +11,6 @@ import Data.Generics.Uniplate.Data()
 import Data.Generics.Uniplate.Operations
 import Data.Map qualified as Map
 import Data.Maybe
-import Safe
 import System.Exit
 import Data.Text qualified as Text
 
@@ -37,7 +35,7 @@ runLogMacro (name:args) = do
                   other -> other
 
   let macros  = [ (show $ pretty n, de)
-                | (ListVal @C (Key "fixme-log-macro" (SymbolVal n:de)) ) <- r
+                | (ListVal (Key "fixme-log-macro" (SymbolVal n:de)) ) <- r
                 ] & Map.fromList & subst
 
   let ma = Map.lookup name macros

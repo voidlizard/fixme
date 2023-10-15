@@ -121,12 +121,12 @@ runReport args mbFilt = do
   conf <- pure (parseTop cfgFile) `orDie` "can't parse config"  <&> (`mappend` bil)
                                                                 <&> (`mappend` bif)
   let r = [ insn
-          | ListVal @C (Key "fixme-report" (SymbolVal n : SymbolVal "json" : insn)) <- conf
+          | ListVal (Key "fixme-report" (SymbolVal n : SymbolVal "json" : insn)) <- conf
           , n == maybe n Id name
           ] & headDef mempty
 
   let queries = [ txt e
-                | ListVal @C (Key "query" [e])  <- r
+                | ListVal (Key "query" [e])  <- r
                 ]
 
   let flt' = case parseFilt (queries <> tailDef mempty args) of
@@ -139,11 +139,11 @@ runReport args mbFilt = do
   let flt = fromMaybe flt' mbFilt
 
   let render  = [ rend
-                | ListVal @C (Key "render" rend)  <- r
+                | ListVal (Key "render" rend)  <- r
                 ] & lastMay
 
   let postprocess = [ p
-                    | ListVal @C (Key "post" p)  <- r
+                    | ListVal (Key "post" p)  <- r
                     ]
 
   let withTemplate = \case

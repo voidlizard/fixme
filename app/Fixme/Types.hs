@@ -4,30 +4,16 @@ module Fixme.Types where
 
 import Fixme.Git
 import Fixme.Hash
-import Data.Config.Suckless
 
-import Control.Exception
-import Data.String
-import Control.Monad.Except (runExceptT,runExcept)
-import Control.Exception (SomeException, try)
-import Data.String (fromString)
 import Data.Default
 import Codec.Serialise
 import Data.HashMap.Strict (HashMap)
-import Data.HashMap.Strict qualified as HashMap
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.List qualified as List
 import GHC.Generics hiding (to)
 import Lens.Micro.Platform
 import Prettyprinter
-
-type C = MegaParsec
-
-pattern Key :: forall {c}. Id -> [Syntax c] -> [Syntax c]
-pattern Key n ns <- SymbolVal  n : ns
-
-
 
 
 data FixmeDef =

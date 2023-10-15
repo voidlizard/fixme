@@ -11,18 +11,13 @@ import Fixme.Git
 import Fixme.Hash
 
 import Data.Config.Suckless
-import Data.Config.Suckless.Syntax
 
 import Prelude hiding (log)
 import Control.Monad.Trans.Maybe
-import Control.Exception
-import Control.Monad.Except (runExceptT,runExcept)
-import Text.InterpolatedString.Perl6 (qc)
 import Codec.Serialise
 import Control.Applicative
 import Control.Concurrent.Async
 import Control.Monad
-import Control.Monad.IO.Class (liftIO,MonadIO)
 import Data.Attoparsec.Text hiding (option,take,try)
 import Data.Attoparsec.Text qualified as Atto
 import Data.ByteString.Lazy.Char8 qualified as LBS
@@ -32,13 +27,10 @@ import Data.IntMap qualified as IntMap
 import Data.List qualified as List
 import Data.Maybe
 import Data.Set qualified as Set
-import Data.String
 import Data.Text.Encoding (decodeUtf8With)
 import Data.Text.Encoding.Error (ignore)
 import Data.Text qualified as Text
-import Data.Text (Text)
 import Lens.Micro.Platform
-import Prettyprinter
 import Safe
 import System.FilePattern
 import System.IO
@@ -65,15 +57,15 @@ processLog opt r e mbCo log = do
     -- let toText = Text.pack . show . pretty
 
     let merged = [ (Text.unpack a, Text.unpack b)
-                 | ListVal @C (Key "fixme-merged" [LitStrVal a, LitStrVal b]) <- log
+                 | ListVal (Key "fixme-merged" [LitStrVal a, LitStrVal b]) <- log
                  ]
 
     let deleted = [ Text.unpack a
-                  | ListVal @C (Key "fixme-del" [LitStrVal a]) <- log
+                  | ListVal (Key "fixme-del" [LitStrVal a]) <- log
                   ]
 
     let attrs = [ (show $ pretty i, a, v)
-                | ListVal @C (Key "fixme-set" [LitStrVal a, LitStrVal v, LitStrVal i]) <- log
+                | ListVal (Key "fixme-set" [LitStrVal a, LitStrVal v, LitStrVal i]) <- log
                 ]
 
     let allowedName s = s `Set.member` allowedAttribs r

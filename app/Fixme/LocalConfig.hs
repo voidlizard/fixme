@@ -3,17 +3,12 @@ module Fixme.LocalConfig where
 
 import Data.Config.Suckless
 import Fixme.Prelude
-import Fixme.OrDie
 import Fixme.Types
 
 import Text.InterpolatedString.Perl6 (qc)
-import Data.Functor
 import System.FilePath
 import System.Directory
-import Prettyprinter
 import Lens.Micro.Platform
-import Data.List qualified as L
-import Data.Maybe
 import Safe
 
 newtype LocalConfig = LocalConfig [Syntax C]
@@ -57,7 +52,7 @@ getPager ft fxm (LocalConfig cfg) = do
   let ext = dropWhile (== '.') $ takeExtension (fxm ^. fixmeFile)
 
   let pager = lastDef [] [  [ show (pretty s) |  s <- xs ]
-                         | (ListVal @C (Key "fixme-pager" xs) ) <- cfg
+                         | (ListVal (Key "fixme-pager" xs) ) <- cfg
                          ]
 
   pure $ case pager of
@@ -74,6 +69,6 @@ getDefaultContext :: MonadIO m => LocalConfig -> m (Maybe (Int, Int))
 getDefaultContext (LocalConfig cfg) = do
   pure $
    lastMay  [ (fromIntegral a, fromIntegral b)
-            | (ListVal @C (Key "fixme-def-context" [LitIntVal a, LitIntVal b]) ) <- cfg
+            | (ListVal (Key "fixme-def-context" [LitIntVal a, LitIntVal b]) ) <- cfg
             ]
 
