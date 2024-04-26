@@ -35,6 +35,7 @@ import Safe
 import System.FilePattern
 import System.IO
 import Data.Either
+import Control.Exception
 
 newtype ScanOpt =
   ScanOpt
@@ -185,7 +186,9 @@ runUpdate :: ScanOpt -> IO ()
 runUpdate opt = do
 
   cfgFile <- readFile confFile
-  currentLog <- readFile logFile
+
+  currentLog <- try @SomeException (readFile logFile)
+                 <&> fromRight mempty
 
   raw <- getGitCommitsForFileRaw logFile
   logs <- getGitCommitsForBlob raw

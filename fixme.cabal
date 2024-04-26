@@ -21,12 +21,9 @@ common shared-properties
         -- -Werror=missing-methods
         -- -Werror=incomplete-patterns
         -- -fno-warn-unused-binds
-        -threaded
-        -rtsopts
-        "-with-rtsopts=-N4 -A64m -AL256m -I0"
 
 
-  default-language:    Haskell2010
+  default-language:  GHC2021
 
   default-extensions:
                        ApplicativeDo
@@ -55,9 +52,63 @@ common shared-properties
                      , TypeFamilies
 
 
+library
+  import:           shared-properties
+
+  build-depends:   base, hbs2-core
+                 , aeson
+                 , aeson-pretty
+                 , async
+                 , attoparsec
+                 , base16-bytestring
+                 , base58-bytestring
+                 , bytestring
+                 , containers
+                 , crypton
+                 , data-default
+                 , directory
+                 , filepath
+                 , filepattern
+                 , interpolatedstring-perl6
+                 , memory
+                 , microlens-platform
+                 , microstache
+                 , mtl
+                 , optparse-applicative
+                 , prettyprinter
+                 , safe
+                 , serialise
+                 , sqlite-simple
+                 , suckless-conf
+                 , text
+                 , text-ansi
+                 , transformers
+                 , typed-process
+                 , uniplate
+                 , unordered-containers
+                 , uuid
+                 , generic-data
+                 , generic-deriving
+                 , hashable
+
+  hs-source-dirs:   app
+
+
 executable fixme
     import:           shared-properties
     main-is:          Main.hs
+
+    ghc-options:
+          -Wall
+          -- -fno-warn-unused-matches
+          -- -fno-warn-unused-do-bind
+          -- -Werror=missing-methods
+          -- -Werror=incomplete-patterns
+          -- -fno-warn-unused-binds
+          -threaded
+          -rtsopts
+          "-with-rtsopts=-N4 -A64m -AL256m -I0"
+
 
     other-modules:
       Fixme.Defaults
@@ -78,7 +129,7 @@ executable fixme
       Paths_fixme
 
     -- other-extensions:
-    build-depends:   base
+    build-depends:   base, fixme
                    , aeson
                    , aeson-pretty
                    , async
@@ -87,7 +138,7 @@ executable fixme
                    , base58-bytestring
                    , bytestring
                    , containers
-                   , cryptonite
+                   , crypton
                    , data-default
                    , directory
                    , filepath
@@ -115,6 +166,5 @@ executable fixme
                    , hashable
 
     hs-source-dirs:   app
-    default-language: Haskell2010
 
 
