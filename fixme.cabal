@@ -61,8 +61,10 @@ library
       Fixme.Types
       Fixme.Git
       Fixme.Config
+      Fixme.State
+      Fixme.Defaults
 
-  build-depends:   base, hbs2-core
+  build-depends:   base, hbs2-core, db-pipe
                  , aeson
                  , aeson-pretty
                  , async
@@ -118,8 +120,6 @@ executable fixme
 
 
     other-modules:
-      Fixme.Defaults
-      Fixme.State
       Fixme.LocalConfig
       Fixme.RunUpdate
       Fixme.RunListAttribs

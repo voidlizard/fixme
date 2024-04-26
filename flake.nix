@@ -6,8 +6,12 @@ inputs = {
     hbs2.url = "git+http://git.hbs2/BTThPdHKF8XnEq4m6wzbKHKA6geLFK4ydYhBXAqBdHSP?ref=0.24.1";
     hbs2.inputs.nixpkgs.follows = "nixpkgs";
     haskell-flake-utils.url = "github:ivanovs-4/haskell-flake-utils";
-    suckless-conf.url = "github:voidlizard/suckless-conf";
+
+    suckless-conf.url = "git+https://git.hbs2.net/JAuk1UJzZfbDGKVazSQU5yYQ3NGfk4gVeZzBCduf5TgQ";
     suckless-conf.inputs.nixpkgs.follows = "nixpkgs";
+
+    db-pipe.url = "git+https://git.hbs2.net/5xrwbTzzweS9yeJQnrrUY9gQJfhJf84pbyHhF2MMmSft?ref=generic-sql";
+    db-pipe.inputs.nixpkgs.follows = "nixpkgs";
 };
 
 outputs = { self, nixpkgs, haskell-flake-utils, ... }@inputs:
@@ -17,7 +21,7 @@ outputs = { self, nixpkgs, haskell-flake-utils, ... }@inputs:
 
       name = "fixme";
 
-      haskellFlakes = [ inputs.suckless-conf inputs.hbs2 ];
+      haskellFlakes = with inputs; [ suckless-conf hbs2 db-pipe ];
 
       packagePostOverrides = { pkgs }: with pkgs; with haskell.lib; [
        disableExecutableProfiling

@@ -9,7 +9,8 @@ import Fixme.Hash
 import Fixme.Defaults
 import Fixme.Prelude
 
-import Data.Foldable(for_)
+import DBPipe.SQLite
+
 import Codec.Serialise
 import Control.Monad.Reader
 import Data.Aeson qualified as Aeson
@@ -21,13 +22,10 @@ import Data.ByteString qualified as BS
 import Data.HashMap.Strict (HashMap)
 import Data.HashMap.Strict qualified as HashMap
 import Data.Maybe
-import Data.String
 import Data.Set qualified as Set
 import Data.Text.Encoding (encodeUtf8)
 import Data.Text qualified as Text
-import Data.Text (Text)
 import Lens.Micro.Platform
-import Prettyprinter
 import Text.InterpolatedString.Perl6 (qc)
 
 
