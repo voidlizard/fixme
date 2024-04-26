@@ -3,16 +3,14 @@
 {-# Language TemplateHaskell #-}
 module Main where
 
+import Fixme.Prelude
 import Fixme.Defaults
-import Fixme.OrDie
 import Fixme.Git
 import Fixme.Hash
 import Fixme.State
 import Fixme.Types
-import Fixme.Prelude
 import Fixme.RunListAttribs
 import Fixme.RunReport
-import Fixme.Config
 import Fixme.LocalConfig
 import Fixme.RunLog
 import Fixme.RunLogMacro
@@ -21,42 +19,25 @@ import Paths_fixme (version)
 
 import Data.Config.Suckless
 
-import Codec.Serialise
-import Control.Concurrent.Async
 import Control.Monad
-import Data.Set qualified as Set
-import Data.Attoparsec.Text hiding (option,take)
-import Data.Attoparsec.Text qualified as Atto
 import Data.ByteString.Lazy.Char8 qualified as LBS
-import Data.Foldable (for_)
-import Data.Function
 import Data.Generics.Uniplate.Data()
-import Data.IntMap qualified as IntMap
-import Data.List qualified as List
 import Data.Maybe
-import Data.String
-import Data.Text.Encoding
-import Data.Text.Encoding.Error (ignore)
 import Data.Text.IO qualified as Text
-import Data.Text qualified as Text
-import Data.Text (Text)
 import Data.UUID.V4 as UUID
 import Data.Version (showVersion)
 import Lens.Micro.Platform
 import Options.Applicative hiding (Parser)
 import Options.Applicative qualified as O
-import Prettyprinter
-import Safe
 import System.Directory
 import System.Exit
-import System.FilePattern
-import System.IO
 import System.Process.Typed
 import Text.InterpolatedString.Perl6 (qc)
-import Data.HashMap.Strict qualified as HashMap
+
 
 -- TODO: check-haskell-comment-still-works
 
+-- FIXME: no-haskell-commits-dont-work
 
 
 data ListOpts =

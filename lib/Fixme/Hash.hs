@@ -1,17 +1,14 @@
 module Fixme.Hash where
 
-import Fixme.Base58
+import Fixme.Prelude
 
 import Crypto.Hash
 import Data.ByteArray qualified as BA
-import Data.String
 import Data.ByteString.Char8 qualified as BS8
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString (ByteString)
 import Data.Maybe
 import Codec.Serialise
-import Prettyprinter
-import GHC.Generics
 
 type FixmeHashAlgorithm = Blake2b_256
 
@@ -25,9 +22,6 @@ class HasFixmeHash a where
 instance Pretty FixmeHash where
   pretty (FixmeHash h) = pretty (AsBase58 h)
 
-
-class FromStringMaybe a where
-  fromStringMay :: String -> Maybe a
 
 instance FromStringMaybe FixmeHash where
   fromStringMay s = FixmeHash <$> doDecode

@@ -55,6 +55,13 @@ common shared-properties
 library
   import:           shared-properties
 
+  exposed-modules:
+      Fixme.Prelude
+      Fixme.Hash
+      Fixme.Types
+      Fixme.Git
+      Fixme.Config
+
   build-depends:   base, hbs2-core
                  , aeson
                  , aeson-pretty
@@ -91,7 +98,7 @@ library
                  , generic-deriving
                  , hashable
 
-  hs-source-dirs:   app
+  hs-source-dirs:   lib
 
 
 executable fixme
@@ -112,14 +119,7 @@ executable fixme
 
     other-modules:
       Fixme.Defaults
-      Fixme.Config
-      Fixme.OrDie
-      Fixme.Git
-      Fixme.Hash
-      Fixme.Base58
       Fixme.State
-      Fixme.Prelude
-      Fixme.Types
       Fixme.LocalConfig
       Fixme.RunUpdate
       Fixme.RunListAttribs
@@ -129,7 +129,7 @@ executable fixme
       Paths_fixme
 
     -- other-extensions:
-    build-depends:   base, fixme
+    build-depends:   base, fixme, hbs2-core
                    , aeson
                    , aeson-pretty
                    , async
