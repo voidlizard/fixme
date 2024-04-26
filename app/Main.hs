@@ -49,10 +49,12 @@ data ListOpts =
 
 makeLenses 'ListOpt
 
-runInit  :: IO ()
-runInit = do
+runInit  :: (FixmePerks m, m ~ IO) => m ()
+runInit = liftIO do
 
   print $ pretty "init" <+> pretty confDir
+
+  path <- getLocalConfigPath
 
   createDirectoryIfMissing True confDir
   confExists <- doesFileExist confFile
@@ -63,11 +65,11 @@ runInit = do
 
   unless logExists do
     Text.writeFile logFile defLog
-    env <- newFixmeEnv
+    env <- newFixmeEnv path
 
     runFixmeState env do
       liftIO $ print $ pretty "init db"
-      initState
+      withState initState
 
 
 runUuid :: IO ()
@@ -76,29 +78,32 @@ runUuid = do
   print $ pretty "uuid:" <+> pretty (show uuid)
 
 
-
-runList :: ListOpts -> IO ()
+runList :: FixmePerks m => ListOpts -> m ()
 runList opt = do
-  e <- newFixmeEnv
 
-  cfgFile <- readFile confFile
+  path <- getLocalConfigPath
 
-  r <- pure (parseTop cfgFile) `orDie` "can't parse config"
+  e <- newFixmeEnv path
 
-  filt <- if view listFiltExact  opt then do
-            let ss = opt ^. listFilters
-            let flt = parseFilt ss
-            pure $ Filt @IO flt
-          else
-            pure $ Filt $ opt ^. listFilters
+  runFixmeState e do
 
-  let brief = ["builtin:list-brief"]
-  let full  = ["builtin:list-full"]
+    cfgFile <- liftIO $ readFile confFile
 
-  let report = if view listShowFull opt then full else brief
+    r <- pure (parseTop cfgFile) `orDie` "can't parse config"
 
-  runReport report (Just filt)
+    filt <- if view listFiltExact  opt then do
+              let ss = opt ^. listFilters
+              let flt = parseFilt ss
+              pure $ Filt flt
+            else
+              pure $ Filt $ opt ^. listFilters
 
+    let brief = ["builtin:list-brief"]
+    let full  = ["builtin:list-full"]
+
+    let report = if view listShowFull opt then full else brief
+
+    runReport report (Just filt)
 
 
 newtype HighlightFixmeBegin = HighlightFixmeBegin Int
@@ -106,9 +111,12 @@ newtype HighlightFixmeBegin = HighlightFixmeBegin Int
 instance PagerFeatures HighlightFixmeBegin where
   pagerHighlightRow (HighlightFixmeBegin x) = Just x
 
-runCat :: FixmeHash -> Maybe Int -> Maybe Int -> IO ()
+runCat :: FixmePerks m => FixmeHash -> Maybe Int -> Maybe Int -> m ()
 runCat h mbefore mafter = do
-  e <- newFixmeEnv
+
+  path <- getLocalConfigPath
+
+  e <- newFixmeEnv path
 
   cfg <- getLocalConfig
   ctx <- getDefaultContext cfg
@@ -186,7 +194,7 @@ main = join . customExecParser (prefs showHelpOnError) $
     pUpdateOpts = do
       ScanOpt <$> flag False True ( long "dry" <> short 'n' <> help "dry run" )
 
-    pUpdate = withState . runUpdate <$> pUpdateOpts
+    pUpdate = runUpdate <$> pUpdateOpts
 
     pUuid = pure runUuid
 
@@ -196,7 +204,7 @@ main = join . customExecParser (prefs showHelpOnError) $
       filt <- many $ strArgument  ( metavar "FILTER" )
       pure $ ListOpt full filt exact
 
-    pList = withState . runList <$> pListOpts
+    pList = runList <$> pListOpts
 
     pSetOpts = do
       attr <- strArgument ( metavar "ATTRIBUTE" )
@@ -234,7 +242,7 @@ main = join . customExecParser (prefs showHelpOnError) $
     pMetaAttr = do
       pure runListAttribs
 
-    pConf = pure $ withState do
+    pConf = pure do
 
       cfgFile <- readFile confFile
 
@@ -245,8 +253,10 @@ main = join . customExecParser (prefs showHelpOnError) $
 
     pReport = do
       args <- many $ strArgument ( metavar "REPORT-NAME" )
-      pure $ withState $ runReport args Nothing
-
+      pure do
+        conf <- getLocalConfigPath
+        env <- newFixmeEnv conf
+        runFixmeState env $ runReport args Nothing
 
     pLogMacro = do
       args <- some $ strArgument ( metavar "MACRO-ARGS" )

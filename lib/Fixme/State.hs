@@ -1,7 +1,10 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# Language TemplateHaskell #-}
 {-# Language AllowAmbiguousTypes #-}
-module Fixme.State where
+module Fixme.State
+  ( module Fixme.State
+  , transactional
+  ) where
 
 import Fixme.Git
 import Fixme.Types
@@ -14,9 +17,6 @@ import DBPipe.SQLite
 import Codec.Serialise
 import Control.Monad.Reader
 import Data.Aeson qualified as Aeson
-import Database.SQLite.Simple
-import Database.SQLite.Simple.FromField
-import Database.SQLite.Simple.ToField
 import Data.ByteString.Lazy (ByteString)
 import Data.ByteString qualified as BS
 import Data.HashMap.Strict (HashMap)
@@ -28,8 +28,9 @@ import Data.Text qualified as Text
 import Lens.Micro.Platform
 import Text.InterpolatedString.Perl6 (qc)
 
+import UnliftIO
 
-import Debug.Trace
+type FixmePerks m = MonadUnliftIO m
 
 class Monad m => HasFixmeFilter a m where
 
@@ -37,7 +38,7 @@ instance Monad m => HasFixmeFilter () m
 
 newtype FixmeEnv =
   FixmeEnv
-  { _fixmeEnvDb :: Connection
+  { _db :: DBPipeEnv
   }
 
 makeLenses 'FixmeEnv
@@ -48,287 +49,216 @@ newtype FixmeState m a =
                    , Functor
                    , Monad
                    , MonadIO
+                   , MonadUnliftIO
                    , MonadTrans
                    , MonadReader FixmeEnv
                    )
 
 
-newFixmeEnv :: IO FixmeEnv
-newFixmeEnv = do
-  conn <- liftIO $ open stateFile
-  pure $ FixmeEnv conn
+newFixmeEnv :: FixmePerks m => FilePath -> m FixmeEnv
+newFixmeEnv path = do
+  let dbOpts = dbPipeOptsDef
+  FixmeEnv <$>  newDBPipeEnv dbOpts path
 
-withConn :: MonadIO m => FixmeState m a -> FixmeState m a
-withConn m = do
-  co <- asks (view fixmeEnvDb)
-  r <- m
-  liftIO $ close co
-  pure r
 
-runFixmeState :: MonadIO m => FixmeEnv -> FixmeState m a -> m a
+runFixmeState :: FixmePerks m => FixmeEnv -> FixmeState m a -> m a
 runFixmeState env m = runReaderT ( fromFixmeState m ) env
 
-withState :: IO a -> IO a
+withFixme :: FixmePerks m => FixmeEnv -> FixmeState m a -> m a
+withFixme = runFixmeState
+
+withState :: (MonadUnliftIO m, MonadReader FixmeEnv m) => DBPipeM m a -> m a
 withState m = do
-  e <- newFixmeEnv
-  runFixmeState e initState
-  m
+  database <- asks _db
+  withDB database m
 
-initState :: MonadIO m => FixmeState m ()
+initState :: MonadIO m => DBPipeM m ()
 initState = do
-  conn <- asks (view fixmeEnvDb)
-  liftIO $ do
-    execute_ conn [qc| create table if not exists
-                       blob ( hash text not null primary key
-                            )
-                     |]
+    ddl [qc| create table if not exists blob
+              ( hash text not null primary key
+              )
+           |]
 
-    execute_ conn [qc| create table if not exists
-                       fixme ( id text not null primary key
-                             , fixme blob not null
-                             )
-                     |]
+    ddl [qc| create table if not exists fixme
+             ( id text not null primary key
+             , fixme blob not null
+             )
+            |]
 
-    execute_ conn [qc| create table if not exists
-                       merged ( a text not null
-                              , b text not null
-                              , primary key (a,b)
-                              )
-                     |]
+    ddl [qc| create table if not exists merged
+             ( a text not null
+             , b text not null
+             , primary key (a, b)
+             )
+           |]
 
-    execute_ conn [qc| create table if not exists
-                       deleted ( id text not null
-                               , primary key (id)
-                               )
-                     |]
+    ddl [qc| create table if not exists deleted
+             ( id text not null
+             , primary key (id)
+             )
+           |]
 
-    execute_ conn [qc|create table if not exists
-                      fixmeattr ( id text not null references fixme(id)
-                                , attr text not null
-                                , value text
-                                , primary key (id,attr) );
-                     |]
+    ddl [qc| create table if not exists fixmeattr
+             ( id text not null references fixme(id)
+             , attr text not null
+             , value text
+             , primary key (id, attr)
+             )
+           |]
 
-    execute_ conn [qc|create table if not exists
-                      fixmeattrlog ( rev text not null
-                                   , id text not null references fixme(id)
-                                   , attr text not null
-                                   , value text
-                                   , primary key (rev,id,attr) );
-                     |]
+    ddl [qc| create table if not exists fixmeattrlog
+             ( rev text not null
+             , id text not null references fixme(id)
+             , attr text not null
+             , value text
+             , primary key (rev, id, attr)
+             )
+           |]
 
-    execute_ conn [qc| create table if not exists
-                       logprocessed ( hash text not null primary key
-                                    )
-                     |]
+    ddl [qc| create table if not exists logprocessed
+             ( hash text not null primary key
+             )
+           |]
+
+    ddl [qc| create table if not exists stateprocessed
+             ( hash text not null primary key
+             )
+           |]
 
 
-    execute_ conn [qc| create table if not exists
-                       stateprocessed ( hash text not null primary key
-                                      )
-                     |]
-
-
-transaction :: forall m a . MonadIO m => FixmeState IO a -> FixmeState m a
-transaction m = do
-  conn <- asks (view fixmeEnvDb)
-  env <- ask
-  liftIO $ withTransaction conn (runFixmeState env m)
-
-allProcessed :: MonadIO m => FixmeState m [GitHash]
-allProcessed = do
-  conn <- asks (view fixmeEnvDb)
-
+allProcessed :: FixmePerks m => FixmeState m [GitHash]
+allProcessed = withState do
   let sql = [qc|
   select hash from blob
   |]
 
-  liftIO $ query_ conn sql <&> fmap fromOnly
+  select_ sql <&> fmap fromOnly
 
-  -- pure $ fmap fromString str
 
-blobProcessed :: MonadIO m => GitHash -> FixmeState m Bool
-blobProcessed h = do
-  conn <- asks (view fixmeEnvDb)
-
+blobProcessed :: FixmePerks m => GitHash -> FixmeState m Bool
+blobProcessed h = withState do
   let sql = [qc|
-  select null from blob where hash = ? limit 1
+    select null from blob where hash = ? limit 1
   |]
+  select @(Only (Maybe Int)) sql (Only h)
+    <&> isJust . listToMaybe . fmap fromOnly
 
-  liftIO $ query @_ @[Maybe Bool] conn sql (Only h) <&> not . null
-
-
-setStateProcessed :: MonadIO m => FixmeHash -> FixmeState m ()
-setStateProcessed h = do
-  conn <- asks (view fixmeEnvDb)
+setStateProcessed ::FixmePerks m => FixmeHash -> FixmeState m ()
+setStateProcessed h = withState do
 
   let sql = [qc|
    insert into stateprocessed (hash) values(?)
    on conflict (hash) do nothing
   |]
 
-  liftIO $ execute conn sql (Only h)
+  insert sql (Only h)
 
-stateProcessed :: MonadIO m => FixmeHash -> FixmeState m Bool
-stateProcessed h = do
-  conn <- asks (view fixmeEnvDb)
+stateProcessed :: FixmePerks m => FixmeHash -> FixmeState m Bool
+stateProcessed h = withState do
 
   let sql = [qc|
   select null from stateprocessed where hash = ? limit 1
   |]
 
-  liftIO $ query @_ @[Maybe Bool] conn sql (Only h) <&> not . null
+  select @(Only (Maybe Int)) sql (Only h) <&> not . null
 
-setLogProcessed :: MonadIO m => GitHash -> FixmeState m ()
-setLogProcessed h = do
-  conn <- asks (view fixmeEnvDb)
 
+setLogProcessed :: FixmePerks m => GitHash -> FixmeState m ()
+setLogProcessed h = withState do
   let sql = [qc|
-   insert into logprocessed (hash) values(?)
-   on conflict (hash) do nothing
+    insert into logprocessed (hash) values(?)
+    on conflict (hash) do nothing
   |]
+  insert sql (Only h)
 
-  liftIO $ execute conn sql (Only h)
-
-logProcessed :: MonadIO m => GitHash -> FixmeState m Bool
-logProcessed h = do
-  conn <- asks (view fixmeEnvDb)
-
+logProcessed :: FixmePerks m => GitHash -> FixmeState m Bool
+logProcessed h = withState do
   let sql = [qc|
-  select null from logprocessed where hash = ? limit 1
+    select null from logprocessed where hash = ? limit 1
   |]
+  select @(Only (Maybe Int)) sql (Only h) <&> not . null
 
-  liftIO $ query @_ @[Maybe Bool] conn sql (Only h) <&> not . null
-
-setProcessed :: MonadIO m => GitHash -> FixmeState m ()
-setProcessed h = do
-  conn <- asks (view fixmeEnvDb)
-
-  here <- blobProcessed h
-
+setProcessed :: FixmePerks m => GitHash -> FixmeState m ()
+setProcessed h = withState do
+  here <- lift $ blobProcessed h
   unless here do
-
     let sql = [qc|
-     insert into blob (hash) values(?)
+      insert into blob (hash) values(?)
     |]
+    insert sql (Only h)
 
-    liftIO $ execute conn sql (Only h)
+-- from here
 
-
-findId :: MonadIO m => String -> FixmeState m [FixmeHash]
-findId s = do
-  conn <- asks (view fixmeEnvDb)
-
+findId :: FixmePerks m => String -> FixmeState m [FixmeHash]
+findId s = withState do
   let sql = [qc|
-  select id from fixme where id like ?
+    select id from fixme where id like ?
   |]
+  select sql (Only (s <> "%")) <&> fmap fromOnly
 
-  liftIO $ query conn sql (Only (s<>"%")) <&> fmap fromOnly
-
-existsFixme :: MonadIO m => Fixme -> FixmeState m Bool
-existsFixme fxm = do
-  conn <- asks (view fixmeEnvDb)
-
+existsFixme :: FixmePerks m => Fixme -> FixmeState m Bool
+existsFixme fxm = withState do
   let h = fxm ^. fixmeId
-
   let sql = [qc|
-  select null from fixme where id = ? limit 1
+    select null from fixme where id = ? limit 1
   |]
+  select @(Only (Maybe Int)) sql (Only h) <&> not . null
 
-  liftIO $ query @_ @[Maybe Bool] conn sql (Only h) <&> not . null
-
-addMerged :: MonadIO m => FixmeHash -> FixmeHash -> FixmeState m ()
-addMerged a b = do
-  conn <- asks (view fixmeEnvDb)
-
+addMerged :: FixmePerks m => FixmeHash -> FixmeHash -> FixmeState m ()
+addMerged a b = withState do
   let sql = [qc|
-  insert into merged (a,b) values (?,?) on conflict (a,b) do nothing
+    insert into merged (a, b) values (?, ?) on conflict (a, b) do nothing
   |]
+  insert sql (a, b)
 
-  liftIO $ execute  conn sql (a,b)
-
-setDeleted :: MonadIO m => FixmeHash -> FixmeState m ()
-setDeleted fid = do
-  conn <- asks (view fixmeEnvDb)
-
+setDeleted :: FixmePerks m => FixmeHash -> FixmeState m ()
+setDeleted fid = withState do
   let sql = [qc|
-  insert into deleted (id) values (?) on conflict (id) do nothing
+    insert into deleted (id) values (?) on conflict (id) do nothing
   |]
+  insert sql (Only fid)
 
-  liftIO $ execute  conn sql (Only fid)
+setAttr :: FixmePerks m => Pretty a => Maybe GitHash -> FixmeHash -> Text -> a -> FixmeState m ()
+setAttr gh' h t v = withState do
+  insert [qc|
+    insert into fixmeattr (id, attr, value) values (?, ?, ?) on conflict (id, attr) do update set value = ?
+  |] (show (pretty h), t, show (pretty v), show (pretty v))
+  maybe1 gh' (pure ()) $ \gh ->
+    insert [qc|
+      insert into fixmeattrlog (rev, id, attr, value) values (?, ?, ?, ?) on conflict (id, attr) do update set value = ?
+    |] (show (pretty gh), show (pretty h), t, show (pretty v), show (pretty v))
 
-
-setAttr ::  MonadIO m  => Pretty a => Maybe GitHash -> FixmeHash -> Text -> a -> FixmeState m ()
-setAttr gh' h t v = do
-  conn <- asks (view fixmeEnvDb)
-  liftIO $ execute conn [qc| insert into fixmeattr (id,attr,value)
-                             values (?,?,?) on conflict (id,attr) do update set value = ?
-                           |] ( show (pretty h), t, show (pretty v), show (pretty v))
-
-
-  maybe1 gh' (pure ()) $ \gh -> do
-
-    liftIO $ execute conn [qc| insert into fixmeattrlog (rev,id,attr,value)
-                               values (?,?,?,?) on conflict (id,attr) do update set value = ?
-                             |] ( show (pretty gh)
-                                , show (pretty h)
-                                , t
-                                , show (pretty v)
-                                , show (pretty v)
-                                )
-
-    pure ()
-
-putFixme :: MonadIO m => Fixme -> FixmeState m ()
+putFixme :: FixmePerks m => Fixme -> FixmeState m ()
 putFixme fxm' = do
   let bs = serialise fxm
-
-  conn <- asks (view fixmeEnvDb)
-
   here <- existsFixme fxm
-
   unless here do
-
     let i = fxm ^. fixmeId
-
-    let sql = [qc|
-     insert into fixme (id,fixme) values(?,?) on conflict (id) do nothing
-    |]
-
-    liftIO $ execute conn sql (i,bs)
-
-    setAttr Nothing (fxm ^. fixmeId) "tag"   (fxm ^. fixmeTag)
-    setAttr Nothing (fxm ^. fixmeId) "title" (fxm ^. fixmeTitle)
-
+    withState do
+      insert [qc|
+        insert into fixme (id, fixme) values (?, ?) on conflict (id) do nothing
+      |] (i, bs)
+    setAttr Nothing i "tag"   (fxm ^. fixmeTag)
+    setAttr Nothing i "title" (fxm ^. fixmeTitle)
   where
     fxm = set fixmeDynAttr mempty fxm'
 
-listFixme :: MonadIO m => FixmeState m [FixmeHash]
-listFixme = do
-  conn <- asks (view fixmeEnvDb)
-
+listFixme :: FixmePerks m => FixmeState m [FixmeHash]
+listFixme = withState do
   let sql = [qc|
-   select id,1 from fixme
+    select id from fixme
   |]
+  select_ sql <&> fmap fromOnly
 
-  z <- liftIO $ query_  @(FixmeHash, Int) conn sql
-  pure $ fmap fst z
-
-getFixme :: MonadIO m => FixmeHash -> FixmeState m (Maybe Fixme)
-getFixme h = do
-
-  conn <- asks (view fixmeEnvDb)
-
+getFixme :: FixmePerks m => FixmeHash -> FixmeState m (Maybe Fixme)
+getFixme h = withState do
   let sql = [qc|
-   select fixme from fixme where id = ? limit 1
+    select fixme from fixme where id = ? limit 1
   |]
-
-  bs <- liftIO $ query @_ @(Only ByteString) conn sql (Only h) <&> fmap fromOnly . listToMaybe
-
-  let fxm = bs >>= either (const  Nothing) Just . deserialiseOrFail @Fixme
-
-  pure fxm
-
+  select sql (Only h)
+    <&> listToMaybe
+    <&> fmap fromOnly
+    >>= maybe (pure Nothing) (pure . either (const Nothing) Just . deserialiseOrFail @Fixme)
 
 makeFixme :: (ByteString, Text) -> Maybe Fixme
 makeFixme (s1, s2') =  fxm <&> over fixmeDynAttr insId
@@ -358,22 +288,22 @@ makeFixme (s1, s2') =  fxm <&> over fixmeDynAttr insId
       Just e  -> HashMap.insert "blob" (txt $ view fixmeFileGitHash e)
       Nothing -> id
 
-class MonadIO m => LoadFixme q m  where
-  loadFixme :: q -> FixmeState m [Fixme]
+class LoadFixme q   where
+  loadFixme :: forall m . FixmePerks m => q -> FixmeState m [Fixme]
 
-data Filt m = forall a . (Show a, Pretty a, LoadFixme a m) => Filt a
+data Filt m = forall a . (Show a, Pretty a, LoadFixme a) => Filt a
 
-instance MonadIO m => LoadFixme (Filt m) m where
+instance LoadFixme (Filt m) where
   loadFixme (Filt a) = loadFixme a
 
-instance MonadIO m => LoadFixme [Text] m where
+instance LoadFixme [Text] where
   loadFixme flt = do
-
-    conn <- asks (view fixmeEnvDb)
 
     let vals = Text.intercalate "," [ "(?)" | _ <- cnd ]
 
-    let sql = [qc|
+    let
+      sql :: String
+      sql = [qc|
 
        with vals(v) as (values {vals})
        select  fixme as fxm
@@ -395,8 +325,7 @@ instance MonadIO m => LoadFixme [Text] m where
           )
     |]
 
-    -- let fxm bs = either (const  Nothing) Just $ deserialiseOrFail @Fixme bs
-    liftIO $ query conn sql cnd <&> mapMaybe makeFixme
+    withState $ select sql cnd <&> mapMaybe makeFixme
 
     where
 
@@ -409,18 +338,18 @@ instance MonadIO m => LoadFixme [Text] m where
 
 -- TODO: better query DSL processing
 
-instance MonadIO m => LoadFixme [(Text,Text)] m where
+instance LoadFixme [(Text,Text)] where
   loadFixme [] = pure mempty
 
   loadFixme flt' | null flt = loadFixme @[Text] mempty <&> invFilt
 
                  | otherwise = do
 
-    conn <- asks (view fixmeEnvDb)
 
     let vals = Text.intercalate "," [ "(?,?)" | _ <- flt ]
 
-    let sql = [qc|
+    let sql :: String
+        sql = [qc|
 
       with vals(a,v) as (values {vals})
       select f.fixme
@@ -442,9 +371,10 @@ instance MonadIO m => LoadFixme [(Text,Text)] m where
 
     let q = HashMap.fromList [ (stripDsl k,v) | (k,v) <- flt', not (Text.isPrefixOf "?" k) ]
 
-    liftIO $ query conn sql unflt <&> mapMaybe makeFixme
-                                  <&> filter (HashMap.isSubmapOf q . view fixmeDynAttr)
-                                  <&> invFilt
+    withState do
+      select sql unflt <&> mapMaybe makeFixme
+                       <&> filter (HashMap.isSubmapOf q . view fixmeDynAttr)
+                       <&> invFilt
 
     where
 
@@ -455,17 +385,16 @@ instance MonadIO m => LoadFixme [(Text,Text)] m where
       flt = [ (stripDsl k, v) | (k,v) <- flt', not (Text.isPrefixOf "~" k) ]
       -- flt = [ (stripDsl k, v) | (k,v) <- flt' ]
 
-      stripDsl = Text.dropWhile (\c -> c `elem` "~? \t")
+      stripDsl = Text.dropWhile (`elem` "~? \t")
 
-listAttrs :: MonadIO m => FixmeState m [Text]
-listAttrs = do
-  conn <- asks (view fixmeEnvDb)
-
-  let sql = [qc|
+listAttrs :: FixmePerks m => FixmeState m [Text]
+listAttrs = withState do
+  let
+    sql :: String
+    sql = [qc|
     select distinct(attr) from fixmeattr;
   |]
-
-  liftIO $ query_  conn sql <&> fmap fromOnly
+  select_ sql <&> fmap fromOnly
 
 instance ToField GitHash where
   toField h = toField (show $ pretty h)

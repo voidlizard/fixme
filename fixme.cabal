@@ -16,6 +16,7 @@ extra-doc-files:    CHANGELOG.md
 common shared-properties
   ghc-options:
         -Wall
+        -fno-warn-type-defaults
         -- -fno-warn-unused-matches
         -- -fno-warn-unused-do-bind
         -- -Werror=missing-methods
@@ -99,6 +100,7 @@ library
                  , generic-data
                  , generic-deriving
                  , hashable
+                 , unliftio
 
   hs-source-dirs:   lib
 

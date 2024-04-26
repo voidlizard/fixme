@@ -9,6 +9,7 @@ import Fixme.State
 import Fixme.Config
 import Fixme.Git
 import Fixme.Hash
+import Fixme.LocalConfig
 
 import Data.Config.Suckless
 
@@ -45,12 +46,13 @@ newtype ScanOpt =
 makeLenses 'ScanOpt
 
 
-processLog :: MonadIO m => ScanOpt
-                        -> [Syntax C] -- config
-                        -> FixmeEnv
-                        -> Maybe GitHash -- commit
-                        -> [Syntax C] -- log
-                        -> m ()
+processLog :: FixmePerks m
+           => ScanOpt
+           -> [Syntax C] -- config
+           -> FixmeEnv
+           -> Maybe GitHash -- commit
+           -> [Syntax C] -- log
+           -> m ()
 
 processLog opt r e mbCo log = do
 
@@ -94,12 +96,14 @@ processLog opt r e mbCo log = do
 
     unless ( opt ^. scanDontAdd ) do
 
-      transaction $ do
-        for_ files $ \(h,_) -> setProcessed h
+      withState do
 
-        for_ fme $ \f -> do
-          liftIO $ print $ pretty (Brief o f)
-          putFixme f
+        transactional $ do
+          for_ files $ \(h,_) -> lift (setProcessed h)
+
+          for_ fme $ \f -> do
+            liftIO $ print $ pretty (Brief o f)
+            lift (putFixme f)
 
     -- FIXME: play only diff for log ?
 
@@ -182,12 +186,14 @@ processLog opt r e mbCo log = do
     maybe1 mbCo (pure()) $ \co -> do
       setLogProcessed co
 
-runUpdate :: ScanOpt -> IO ()
+runUpdate :: FixmePerks m => ScanOpt -> m ()
 runUpdate opt = do
 
-  cfgFile <- readFile confFile
+  localConf <- getLocalConfigPath
 
-  currentLog <- try @SomeException (readFile logFile)
+  cfgFile <- liftIO $ readFile confFile
+
+  currentLog <- liftIO $ try @SomeException (readFile logFile)
                  <&> fromRight mempty
 
   raw <- getGitCommitsForFileRaw logFile
@@ -195,8 +201,8 @@ runUpdate opt = do
 
   let mark = fixmeHash raw
 
-  e <- newFixmeEnv
-  runFixmeState e initState
+  e <- newFixmeEnv localConf
+  runFixmeState e $ withState initState
 
   done <- runFixmeState e $ stateProcessed mark
 
@@ -236,9 +242,10 @@ runUpdate opt = do
   processLog opt r e Nothing lastLog
 
 
-parseBlob :: FixmeDef
+parseBlob :: FixmePerks m
+          => FixmeDef
           -> (GitHash, FilePath)
-          -> IO [Fixme]
+          -> m [Fixme]
 
 parseBlob def (gh, fp) = do
   -- FIXME: check if file is too big

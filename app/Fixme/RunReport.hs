@@ -4,6 +4,7 @@ import Fixme.Prelude
 import Fixme.Types
 import Fixme.Defaults
 import Fixme.State
+import Fixme.LocalConfig
 
 import Data.Config.Suckless
 
@@ -107,12 +108,12 @@ blob: {{blob}}
 {{/items}}
 |]
 
-runReport :: [Text] -> Maybe (Filt IO) -> IO ()
+runReport :: forall m . FixmePerks m => [Text] -> Maybe (Filt (FixmeState m)) -> FixmeState m ()
 runReport args mbFilt = do
 
   let name = headMay args
 
-  cfgFile <- readFile confFile
+  cfgFile <- liftIO $ readFile confFile
   let dir = takeDirectory confFile
 
   -- FIXME: error-handling
@@ -130,8 +131,8 @@ runReport args mbFilt = do
                 ]
 
   let flt' = case parseFilt (queries <> tailDef mempty args) of
-              [] -> Filt @IO ( [] :: [Text] )
-              xs -> Filt xs
+              [] -> Filt  ( [] :: [Text] )
+              xs -> Filt   xs
 
   -- case flt' of
   --   Filt zz -> print zz
@@ -154,26 +155,28 @@ runReport args mbFilt = do
                           applyPost postprocess (renderMustache compiled encoded)
                             >>= TIO.putStr
 
-  zzz <- case render of
 
-            Just [SymbolVal "builtin:microstache", SymbolVal "builtin:list-brief"] -> do
-              let res = compileMustacheText "builtin:list-brief" builtinListBriefTpl
-              withTemplate res
+  fixmies <- loadFixme flt
 
-            Just [SymbolVal "builtin:microstache", SymbolVal "builtin:list-full"] -> do
-              let res = compileMustacheText "builtin:list-full" builtinListFullTpl
-              withTemplate res
+  liftIO do
 
-            Just [SymbolVal "builtin:microstache", t] -> do
-              tpl <- canonicalizePath (dir </> Text.unpack (txt t))
-              compileMustacheFile tpl >>= withTemplate . Right
+    zzz <- case render of
 
-            _ ->  pure $ \f -> do
-                    BS.putStr $ encodePretty $ Report $ fmap (view fixmeDynAttr) f
+              Just [SymbolVal "builtin:microstache", SymbolVal "builtin:list-brief"] -> do
+                let res = compileMustacheText "builtin:list-brief" builtinListBriefTpl
+                withTemplate res
 
-  e <- newFixmeEnv
-  runFixmeState e $ do
-    fixmies <- loadFixme flt
-    liftIO (zzz fixmies)
+              Just [SymbolVal "builtin:microstache", SymbolVal "builtin:list-full"] -> do
+                let res = compileMustacheText "builtin:list-full" builtinListFullTpl
+                withTemplate res
+
+              Just [SymbolVal "builtin:microstache", t] -> do
+                tpl <- canonicalizePath (dir </> Text.unpack (txt t))
+                compileMustacheFile tpl >>= withTemplate . Right
+
+              _ ->  pure $ \f -> do
+                      BS.putStr $ encodePretty $ Report $ fmap (view fixmeDynAttr) f
+
+    zzz fixmies
 
 

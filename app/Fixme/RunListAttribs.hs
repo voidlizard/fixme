@@ -2,14 +2,12 @@ module Fixme.RunListAttribs where
 
 import Fixme.Prelude
 import Fixme.State
-
-import Data.Foldable(for_)
-import Prettyprinter
+import Fixme.LocalConfig
 
 
 runListAttribs :: IO ()
 runListAttribs = do
-  e <- newFixmeEnv
+  e <- newFixmeEnv =<< getLocalConfigPath
 
   runFixmeState e $ do
     s <- listAttrs

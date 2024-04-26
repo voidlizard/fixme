@@ -5,10 +5,7 @@ import Fixme.Defaults
 import Fixme.RunLog
 import Data.Config.Suckless
 
-import Data.Foldable (for_)
-import Data.Function
 import Data.Generics.Uniplate.Data()
-import Data.Generics.Uniplate.Operations
 import Data.Map qualified as Map
 import Data.Maybe
 import System.Exit

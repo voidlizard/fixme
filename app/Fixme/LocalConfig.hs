@@ -21,16 +21,20 @@ class PagerFeatures a where
 
 instance PagerFeatures ()
 
+
+cfg :: FilePath
+cfg = "config"
+
+getLocalConfigPath  :: MonadIO m => m FilePath
+getLocalConfigPath = liftIO do
+  xdg <- getXdgDirectory XdgConfig "fixme"
+  pure $ xdg </> cfg
+
 getLocalConfig :: MonadIO m => m LocalConfig
 getLocalConfig = liftIO do
+  localConf <- getLocalConfigPath
 
-  let cfg = "config"
-
-  xdg <- getXdgDirectory XdgConfig "fixme"
-
-  let localConf = xdg </> cfg
-
-  createDirectoryIfMissing True xdg
+  createDirectoryIfMissing True localConf
 
   here <- doesFileExist localConf
 
