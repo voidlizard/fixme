@@ -27,6 +27,7 @@ import Data.Text.Encoding (encodeUtf8)
 import Data.Text qualified as Text
 import Lens.Micro.Platform
 import Text.InterpolatedString.Perl6 (qc)
+import System.FilePath
 
 import UnliftIO
 
@@ -58,7 +59,8 @@ newtype FixmeState m a =
 newFixmeEnv :: FixmePerks m => FilePath -> m FixmeEnv
 newFixmeEnv path = do
   let dbOpts = dbPipeOptsDef
-  FixmeEnv <$>  newDBPipeEnv dbOpts path
+  let dbfile = (path & takeDirectory) </> "state.db"
+  FixmeEnv <$>  newDBPipeEnv dbOpts dbfile
 
 
 runFixmeState :: FixmePerks m => FixmeEnv -> FixmeState m a -> m a
