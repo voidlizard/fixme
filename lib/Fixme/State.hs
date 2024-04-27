@@ -123,7 +123,7 @@ newFixmeEnv conf lconf ldbfile = do
 
      cpath <- canonicalizePath (coerce path)
 
-     touch cpath
+     -- touch cpath
 
      try @_ @IOException (liftIO (readFile cpath))
                <&> fromRight mempty
@@ -143,11 +143,12 @@ newFixmeEnv conf lconf ldbfile = do
 
   let dbFrom lc = lc <&> \s -> takeDirectory (coerce s) </> "state.db"
 
-  let db = (coerce ldbfile <|> dbFrom lconf)
+  let dbf = (coerce ldbfile <|> dbFrom lconf)
               & fromMaybe ".fixme/state.db"
+  touch dbf
 
   let dbOpts = dbPipeOptsDef
-  FixmeEnv lcp theConf <$>  newDBPipeEnv dbOpts db
+  FixmeEnv lcp theConf <$>  newDBPipeEnv dbOpts dbf
 
 
 runFixmeState :: FixmePerks m => FixmeEnv -> FixmeState m a -> m a

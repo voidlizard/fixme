@@ -11,9 +11,11 @@ fixme-comments   // #  "--" ";"
 
 fixme-prefix     FIXME:     bugs issues   ; defines a fixme entity and it's categories
 
-; fixme-files         ; sets file patterns to scan
+; sets file patterns to scan
+; fixme-files **/*.txt **/*.hs
 
-; fixme-files-ignore  ; sets file patterns to ignore
+; sets file patterns to ignore
+; fixme-files-ignore .direnv/** dist-newstyle/**
 
 |]
 

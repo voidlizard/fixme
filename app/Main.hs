@@ -64,10 +64,14 @@ runInit = liftIO do
   unless confExists do
     Text.writeFile lcf defConfig
 
+    e <- newFixmeEnvDefault
     runFixmeState e do
       liftIO $ print $ pretty "init db"
       withState initState
 
+    notice $ green ".fixme/config created"
+     <> line
+     <> pretty (view config e)
 
 runUuid :: IO ()
 runUuid = do
@@ -144,7 +148,9 @@ runCat h mbefore mafter = do
 withDefaultState :: FixmePerks m => FixmeState m a -> m a
 withDefaultState m = do
   env <- newFixmeEnvDefault
-  runFixmeState env m
+  runFixmeState env do
+    withState initState
+    m
 
 withLogger :: MonadUnliftIO m => m a -> m a
 withLogger m = do
