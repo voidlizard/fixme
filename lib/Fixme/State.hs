@@ -34,6 +34,7 @@ import Text.InterpolatedString.Perl6 (qc)
 import Data.Coerce
 import System.FilePath
 import System.Directory hiding (canonicalizePath)
+import System.IO (hPrint,stderr,stdout)
 
 import UnliftIO
 
@@ -108,7 +109,7 @@ newtype LocalStateDir = LocalStateFile FilePath
 
 newFixmeEnvDefault :: FixmePerks m
                    => m FixmeEnv
-newFixmeEnvDefault = newFixmeEnv mempty Nothing Nothing
+newFixmeEnvDefault = newFixmeEnv mempty (Just ".fixme/config") Nothing
 
 newFixmeEnv :: FixmePerks m
             => [Syntax C]
@@ -119,6 +120,7 @@ newFixmeEnv :: FixmePerks m
 newFixmeEnv conf lconf ldbfile = do
 
   (localConf, lcp) <- maybe1 lconf (pure mempty) $ \path  -> do
+
      cpath <- canonicalizePath (coerce path)
 
      touch cpath

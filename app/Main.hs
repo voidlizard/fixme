@@ -3,7 +3,7 @@
 {-# Language TemplateHaskell #-}
 module Main where
 
-import Fixme.Prelude
+import Fixme.Prelude hiding (info)
 import Fixme.Defaults
 import Fixme.Git
 import Fixme.Hash
@@ -52,8 +52,6 @@ makeLenses 'ListOpt
 runInit  :: (FixmePerks m, m ~ IO) => m ()
 runInit = liftIO do
 
-  print $ pretty "init" <+> pretty confDir
-
   e <- newFixmeEnvDefault
 
   let path = view localStateDir e
@@ -79,10 +77,6 @@ runUuid = do
 
 runList :: FixmePerks m => ListOpts -> FixmeState m ()
 runList opt = do
-
-  cfgFile <- liftIO $ readFile confFile
-
-  r <- pure (parseTop cfgFile) `orDie` "can't parse config"
 
   filt <- if view listFiltExact  opt then do
             let ss = opt ^. listFilters
@@ -152,13 +146,26 @@ withDefaultState m = do
   env <- newFixmeEnvDefault
   runFixmeState env m
 
+withLogger :: MonadUnliftIO m => m a -> m a
+withLogger m = do
+ setLogging @ERROR  (logPrefix "" . toStderr)
+ setLogging @WARN   (logPrefix "" . toStderr)
+ setLogging @DEBUG  (logPrefix "" . toStderr)
+ setLogging @NOTICE (logPrefix "" . toStderr)
+ m `finally` do
+   setLoggingOff @ERROR
+   setLoggingOff @WARN
+   setLoggingOff @DEBUG
+   setLoggingOff @NOTICE
+
 main :: IO ()
-main = join . customExecParser (prefs showHelpOnError) $
-  info (helper <*> versionOption <*> parser)
-  (  fullDesc
-  <> header ("fixme " <> ver)
-  <> progDesc "trackerless issue management"
-  )
+main = withLogger do
+  join . customExecParser (prefs showHelpOnError) $
+    info (helper <*> versionOption <*> parser)
+    (  fullDesc
+    <> header ("fixme " <> ver)
+    <> progDesc "trackerless issue management"
+    )
   where
     ver = "v" <> showVersion version
 
@@ -176,7 +183,6 @@ main = join . customExecParser (prefs showHelpOnError) $
                         <> command "del"     (info pDel    (progDesc "mark a fixme deleted"))
                         <> command "merge"   (info pMerge  (progDesc "mark a fixme merged"))
                         <> command "meta"    (info (hsubparser pMeta) (progDesc "metadata commands") )
-                        <> command "scan"    (info pUpdate (progDesc "obsolete; use update"))
                         )
               <|> pLogMacro
 
@@ -186,7 +192,10 @@ main = join . customExecParser (prefs showHelpOnError) $
     pUpdateOpts = do
       ScanOpt <$> flag False True ( long "dry" <> short 'n' <> help "dry run" )
 
-    pUpdate = runUpdate <$> pUpdateOpts
+    pUpdate = do
+      o <- pUpdateOpts
+      pure $ withDefaultState do
+        runUpdate o
 
     pUuid = pure runUuid
 

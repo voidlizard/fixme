@@ -3,13 +3,11 @@
 module Fixme.RunUpdate where
 
 import Fixme.Prelude
-import Fixme.Defaults
 import Fixme.Types
 import Fixme.State
 import Fixme.Config
 import Fixme.Git
 import Fixme.Hash
-import Fixme.LocalConfig
 
 import Data.Config.Suckless
 
@@ -17,12 +15,9 @@ import Prelude hiding (log)
 import Control.Monad.Trans.Maybe
 import Codec.Serialise
 import Control.Applicative
-import Control.Monad
 import Data.Attoparsec.Text hiding (option,take,try)
 import Data.Attoparsec.Text qualified as Atto
 import Data.ByteString.Lazy.Char8 qualified as LBS
-import Data.Foldable(for_)
-import Data.Function
 import Data.IntMap qualified as IntMap
 import Data.List qualified as List
 import Data.Maybe
@@ -30,9 +25,6 @@ import Data.Set qualified as Set
 import Data.Text.Encoding (decodeUtf8With)
 import Data.Text.Encoding.Error (ignore)
 import Data.Text qualified as Text
-import Lens.Micro.Platform
-import Safe
-import System.FilePattern
 import System.IO
 import Data.Either
 
@@ -50,146 +42,146 @@ processLog :: FixmePerks m
            -> FixmeEnv
            -> Maybe GitHash -- commit
            -> [Syntax C] -- log
-           -> m ()
+           -> FixmeState m ()
 
 processLog opt r e mbCo log = do
 
-  runFixmeState e $ do
-    -- let toText = Text.pack . show . pretty
 
-    let merged = [ (Text.unpack a, Text.unpack b)
-                 | ListVal (Key "fixme-merged" [LitStrVal a, LitStrVal b]) <- log
-                 ]
+  let merged = [ (Text.unpack a, Text.unpack b)
+               | ListVal (Key "fixme-merged" [LitStrVal a, LitStrVal b]) <- log
+               ]
 
-    let deleted = [ Text.unpack a
-                  | ListVal (Key "fixme-del" [LitStrVal a]) <- log
-                  ]
-
-    let attrs = [ (show $ pretty i, a, v)
-                | ListVal (Key "fixme-set" [LitStrVal a, LitStrVal v, LitStrVal i]) <- log
+  let deleted = [ Text.unpack a
+                | ListVal (Key "fixme-del" [LitStrVal a]) <- log
                 ]
 
-    let allowedName s = s `Set.member` allowedAttribs r
+  let attrs = [ (show $ pretty i, a, v)
+              | ListVal (Key "fixme-set" [LitStrVal a, LitStrVal v, LitStrVal i]) <- log
+              ]
 
-    let allowedVal k v = isAllowedVal k v (allowedValues r)
+  let allowedName s = s `Set.member` allowedAttribs r
 
-    let exclude = ignored r
+  let allowedVal k v = isAllowedVal k v (allowedValues r)
 
-    let fpat (_,f) =  or [ x ?== f | x <- masks r ]
-                   && (null exclude || not ( and [ x ?== f | x <- exclude] ))
+  let exclude = ignored r
 
-    blobz <- gitListAllBlobs <&> List.nubBy ((==) `on` fst)
-                 >>= filterM ( \(h,_) -> blobProcessed h <&> not)
+  let fpat (_,f) =  or [ x ?== f | x <- masks r ]
+                 && (null exclude || not ( and [ x ?== f | x <- exclude] ))
 
-    let files = blobz & reverse . filter fpat
+  blobz <- gitListAllBlobs <&> List.nubBy ((==) `on` fst)
+               >>= filterM ( \(h,_) -> blobProcessed h <&> not)
 
-    let fxdef = FixmeDef (List.nub (comm r))  (List.nub ("FIXME:" : pref r))
+  let files = blobz & reverse . filter fpat
 
-    fme <- liftIO $ List.nubBy ((==) `on` view fixmeId) . mconcat
-              <$> mapConcurrently (parseBlob fxdef) files
+  let fxdef = FixmeDef (List.nub (comm r))  (List.nub ("FIXME:" : pref r))
 
-    -- FIXME: remove-tag-len-hardcode-somehow-new
+  fme <- liftIO $ List.nubBy ((==) `on` view fixmeId) . mconcat
+            <$> mapConcurrently (parseBlob fxdef) files
 
-    let o = FmtAttr (fromIntegral (idlen r) ) 8 (tpref r)
+  -- FIXME: remove-tag-len-hardcode-somehow-new
 
-    unless ( opt ^. scanDontAdd ) do
+  let o = FmtAttr (fromIntegral (idlen r) ) 8 (tpref r)
 
-      withState do
+  unless ( opt ^. scanDontAdd ) do
 
-        transactional $ do
-          for_ files $ \(h,_) -> lift (setProcessed h)
+    withState do
 
-          for_ fme $ \f -> do
-            liftIO $ print $ pretty (Brief o f)
-            lift (putFixme f)
+      transactional $ do
+        for_ files $ \(h,_) -> lift (setProcessed h)
 
-    -- FIXME: play only diff for log ?
+        for_ fme $ \f -> do
+          liftIO $ print $ pretty (Brief o f)
+          lift (putFixme f)
 
-    -- FIXME: don't play log twice(?)
+  -- FIXME: play only diff for log ?
 
-    -- FIXME: to-play-log-function
+  -- FIXME: don't play log twice(?)
 
-
-      run <- forM attrs $ \(i',a,v) -> do
-        ii <- findId i'
-
-        runMaybeT $ do
-
-          i <- MaybeT $ pure $ fromStringMay i'
-
-          let valid = allowedName a && allowedVal a v
-
-          unless (allowedVal a v) do
-            liftIO $ hPrint stderr $ "*** warn: value" <+> pretty v
-                                                        <+> "not allowed for"
-                                                        <+> pretty a
-
-          unless (allowedName a) do
-            liftIO $ hPrint stderr $ "*** warn: attrib name" <+> pretty a
-                                                              <+> pretty "not allowed"
-
-          case ii of
-             [x] | valid     -> pure [ setAttr Nothing x a v ]
-                    | otherwise -> pure []
-
-             []     | valid     -> pure [ setAttr Nothing i a v ]
-                    | otherwise -> pure []
-
-             _   -> do
-               liftIO $ hPrint stderr $ "fixme-set:"
-                                           <+> pretty ii
-                                           <+> "is ambiguous, ignored"
-               pure mempty
-
-      unless ( opt ^. scanDontAdd ) do
-        sequence_ (mconcat (catMaybes run))
+  -- FIXME: to-play-log-function
 
 
-      del <- forM deleted $ \i' -> do
-        ii <- findId i'
+    run <- forM attrs $ \(i',a,v) -> do
+      ii <- findId i'
 
-        runMaybeT $ do
+      runMaybeT $ do
 
-          i <- MaybeT $ pure $ fromStringMay i'
+        i <- MaybeT $ pure $ fromStringMay i'
 
-          case ii of
-             [x] -> pure [ setDeleted x ]
-             []  -> pure [ setDeleted i ]
-             _   -> do
-               liftIO $ hPrint stderr $ "fixme-del:"
-                                           <+> pretty i
-                                           <+> "is ambiguous, ignored"
-               pure mempty
+        let valid = allowedName a && allowedVal a v
 
-      unless ( opt ^. scanDontAdd ) do
-        sequence_ (mconcat (catMaybes del))
+        unless (allowedVal a v) do
+          liftIO $ hPrint stderr $ "*** warn: value" <+> pretty v
+                                                      <+> "not allowed for"
+                                                      <+> pretty a
 
-    merges <- forM merged $ \(a,b) -> do
-                aId <- findId a
-                bId <- findId b
+        unless (allowedName a) do
+          liftIO $ hPrint stderr $ "*** warn: attrib name" <+> pretty a
+                                                            <+> pretty "not allowed"
 
-                case (aId, bId) of
-                  ( [x], [y] ) -> pure [addMerged x y]
-                  ( [], [] )   -> pure [addMerged (fromString a) (fromString b)]
-                  _ -> do
-                    liftIO $ hPrint stderr $ "fixme-merge"
-                                                <+> pretty a
-                                                <+> pretty b
-                                                <+> "is ambigous, ignored"
-                    pure []
+        case ii of
+           [x] | valid     -> pure [ setAttr Nothing x a v ]
+                  | otherwise -> pure []
+
+           []     | valid     -> pure [ setAttr Nothing i a v ]
+                  | otherwise -> pure []
+
+           _   -> do
+             liftIO $ hPrint stderr $ "fixme-set:"
+                                         <+> pretty ii
+                                         <+> "is ambiguous, ignored"
+             pure mempty
 
     unless ( opt ^. scanDontAdd ) do
-      sequence_ (mconcat merges)
+      sequence_ (mconcat (catMaybes run))
 
-    maybe1 mbCo (pure()) $ \co -> do
-      setLogProcessed co
 
-runUpdate :: FixmePerks m => ScanOpt -> m ()
+    del <- forM deleted $ \i' -> do
+      ii <- findId i'
+
+      runMaybeT $ do
+
+        i <- MaybeT $ pure $ fromStringMay i'
+
+        case ii of
+           [x] -> pure [ setDeleted x ]
+           []  -> pure [ setDeleted i ]
+           _   -> do
+             liftIO $ hPrint stderr $ "fixme-del:"
+                                         <+> pretty i
+                                         <+> "is ambiguous, ignored"
+             pure mempty
+
+    unless ( opt ^. scanDontAdd ) do
+      sequence_ (mconcat (catMaybes del))
+
+  merges <- forM merged $ \(a,b) -> do
+              aId <- findId a
+              bId <- findId b
+
+              case (aId, bId) of
+                ( [x], [y] ) -> pure [addMerged x y]
+                ( [], [] )   -> pure [addMerged (fromString a) (fromString b)]
+                _ -> do
+                  liftIO $ hPrint stderr $ "fixme-merge"
+                                              <+> pretty a
+                                              <+> pretty b
+                                              <+> "is ambigous, ignored"
+                  pure []
+
+  unless ( opt ^. scanDontAdd ) do
+    sequence_ (mconcat merges)
+
+  maybe1 mbCo (pure()) $ \co -> do
+    setLogProcessed co
+
+runUpdate :: FixmePerks m => ScanOpt -> FixmeState m ()
 runUpdate opt = do
 
-  e <- newFixmeEnvDefault
+  e <- ask
 
-  cfgFile <- liftIO $ readFile confFile
+  let r = view config e
+
+  let logFile = view localLogFile e
 
   currentLog <- liftIO $ try @_ @SomeException (readFile logFile)
                  <&> fromRight mempty
@@ -199,12 +191,7 @@ runUpdate opt = do
 
   let mark = fixmeHash raw
 
-  runFixmeState e $ withState initState
-
   done <- runFixmeState e $ stateProcessed mark
-
-  -- FIXME: better error handling
-  r <- pure (parseTop cfgFile) `orDie` "can't parse config"
 
   unless done do
     for_ logs $ \(_,co) -> do

@@ -104,16 +104,19 @@ blob: {{blob}}
 runReport :: forall m . FixmePerks m => [Text] -> Maybe (Filt (FixmeState m)) -> FixmeState m ()
 runReport args mbFilt = do
 
+  env <- ask
+
   let name = headMay args
 
-  cfgFile <- liftIO $ readFile confFile
-  let dir = takeDirectory confFile
+  let dir = view localStateDir env
+  let localConf = view config env
 
   -- FIXME: error-handling
   bil <- pure (parseTop builtinListBrief) `orDie` "broken builtin reports"
   bif <- pure (parseTop builtinListFull) `orDie` "broken builtin reports"
-  conf <- pure (parseTop cfgFile) `orDie` "can't parse config"  <&> (`mappend` bil)
-                                                                <&> (`mappend` bif)
+
+  let conf = localConf <> bil <> bif
+
   let r = [ insn
           | ListVal (Key "fixme-report" (SymbolVal n : SymbolVal "json" : insn)) <- conf
           , n == maybe n Id name

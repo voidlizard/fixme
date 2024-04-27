@@ -65,6 +65,7 @@ fixme-log-macro backlog (fixme-set "workflow" "backlog" "$1")
 fixme-log-macro test    (fixme-set "workflow" "test" "$1")
 fixme-log-macro wip     (fixme-set "workflow" "wip" "$1")
 fixme-log-macro assign  (fixme-set "assigned" "$1" "$2")
+fixme-log-macro done    (fixme-set "done" "$1" "$2")
 
 
 

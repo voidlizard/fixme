@@ -1,26 +1,13 @@
 module Fixme.Defaults where
 
 import Data.Text (Text)
-import System.FilePath
 import Text.InterpolatedString.Perl6 (qc)
-
-confDir :: FilePath
-confDir = ".fixme"
-
-confFile :: FilePath
-confFile = confDir </> "config"
-
-logFile :: FilePath
-logFile = confDir </> "log"
-
-stateFile :: FilePath
-stateFile = confDir </> "state.db"
 
 
 defConfig :: Text
 defConfig = [qc|
 
-fixme-comments   // #  --
+fixme-comments   // #  "--" ";"
 
 fixme-prefix     FIXME:     bugs issues   ; defines a fixme entity and it's categories
 

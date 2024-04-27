@@ -3,6 +3,8 @@ module Fixme.Prelude
   , module HBS2.Base58
   , module HBS2.OrDie
   , module HBS2.System.Dir
+  , module HBS2.System.Logger.Simple.ANSI
+  , module HBS2.Misc.PrettyStuff
   , module Control.Monad.IO.Class
   , module Data.Default
   , module Data.Function
@@ -22,6 +24,9 @@ import HBS2.Prelude.Plated hiding (at)
 import HBS2.OrDie
 import HBS2.System.Dir
 import HBS2.Base58
+import HBS2.Misc.PrettyStuff
+
+import HBS2.System.Logger.Simple.ANSI
 
 import Control.Monad.IO.Class
 import Data.Text qualified as Text
