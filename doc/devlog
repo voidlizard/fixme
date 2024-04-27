@@ -1,3 +1,9 @@
+## 2023-03-29
+
+FIXME: raspberrypi-error
+  При поптыке запустить `fixme update` или `fixme list` на Raspberry Pi 4
+  программа завершается и ничего не выводит.
+  Таблицы fixme и blob в state.db при этом пустые.
 
 ## 2023-03-23
 
