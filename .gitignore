@@ -4,3 +4,4 @@ bin/
 .fixme/state.db
 result
 .hbs2-git/
+.envrc.local
