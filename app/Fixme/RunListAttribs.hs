@@ -7,7 +7,7 @@ import Fixme.LocalConfig
 
 runListAttribs :: IO ()
 runListAttribs = do
-  e <- newFixmeEnv =<< getLocalConfigPath
+  e <- newFixmeEnvDefault
 
   runFixmeState e $ do
     s <- listAttrs

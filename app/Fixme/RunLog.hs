@@ -3,11 +3,10 @@ module Fixme.RunLog where
 import Fixme.Prelude
 import Fixme.Defaults
 import Fixme.State
-import Fixme.LocalConfig
 
-runLog :: Bool -> String -> IO ()
+runLog :: FixmePerks m => Bool -> String -> FixmeState m ()
 runLog dry s = do
-  e  <- getLocalConfigPath >>= newFixmeEnv
+  e  <- newFixmeEnvDefault
   runFixmeState e $ liftIO do
     print (pretty s)
     unless dry do

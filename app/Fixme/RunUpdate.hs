@@ -17,7 +17,6 @@ import Prelude hiding (log)
 import Control.Monad.Trans.Maybe
 import Codec.Serialise
 import Control.Applicative
-import Control.Concurrent.Async
 import Control.Monad
 import Data.Attoparsec.Text hiding (option,take,try)
 import Data.Attoparsec.Text qualified as Atto
@@ -36,7 +35,6 @@ import Safe
 import System.FilePattern
 import System.IO
 import Data.Either
-import Control.Exception
 
 newtype ScanOpt =
   ScanOpt
@@ -189,11 +187,11 @@ processLog opt r e mbCo log = do
 runUpdate :: FixmePerks m => ScanOpt -> m ()
 runUpdate opt = do
 
-  localConf <- getLocalConfigPath
+  e <- newFixmeEnvDefault
 
   cfgFile <- liftIO $ readFile confFile
 
-  currentLog <- liftIO $ try @SomeException (readFile logFile)
+  currentLog <- liftIO $ try @_ @SomeException (readFile logFile)
                  <&> fromRight mempty
 
   raw <- getGitCommitsForFileRaw logFile
@@ -201,7 +199,6 @@ runUpdate opt = do
 
   let mark = fixmeHash raw
 
-  e <- newFixmeEnv localConf
   runFixmeState e $ withState initState
 
   done <- runFixmeState e $ stateProcessed mark

@@ -51,7 +51,7 @@ common shared-properties
                      , TupleSections
                      , TypeApplications
                      , TypeFamilies
-
+                     , RecordWildCards
 
 library
   import:           shared-properties

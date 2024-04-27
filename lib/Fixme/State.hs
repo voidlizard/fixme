@@ -1,19 +1,23 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# Language TemplateHaskell #-}
 {-# Language AllowAmbiguousTypes #-}
+{-# Language UndecidableInstances #-}
 module Fixme.State
   ( module Fixme.State
   , transactional
   ) where
 
+import Fixme.Prelude
 import Fixme.Git
 import Fixme.Types
 import Fixme.Hash
 import Fixme.Defaults
-import Fixme.Prelude
 
 import DBPipe.SQLite
 
+import Data.Config.Suckless
+
+import Control.Applicative
 import Codec.Serialise
 import Control.Monad.Reader
 import Data.Aeson qualified as Aeson
@@ -22,12 +26,14 @@ import Data.ByteString qualified as BS
 import Data.HashMap.Strict (HashMap)
 import Data.HashMap.Strict qualified as HashMap
 import Data.Maybe
+import Data.Either
 import Data.Set qualified as Set
 import Data.Text.Encoding (encodeUtf8)
 import Data.Text qualified as Text
-import Lens.Micro.Platform
 import Text.InterpolatedString.Perl6 (qc)
+import Data.Coerce
 import System.FilePath
+import System.Directory hiding (canonicalizePath)
 
 import UnliftIO
 
@@ -37,12 +43,23 @@ class Monad m => HasFixmeFilter a m where
 
 instance Monad m => HasFixmeFilter () m
 
-newtype FixmeEnv =
+data FixmeEnv =
   FixmeEnv
-  { _db :: DBPipeEnv
+  { _localStateDir :: FilePath
+  , _config        :: [Syntax C]
+  , _db            :: DBPipeEnv
   }
 
 makeLenses 'FixmeEnv
+
+localLogFile :: SimpleGetter FixmeEnv FilePath
+localLogFile = to
+  \FixmeEnv{..} -> _localStateDir </> "log"
+
+
+localConfigFile :: SimpleGetter FixmeEnv FilePath
+localConfigFile = to
+  \FixmeEnv{..} -> _localStateDir </> "config"
 
 newtype FixmeState m a =
   FixmeState  { fromFixmeState :: ReaderT FixmeEnv m a }
@@ -56,11 +73,79 @@ newtype FixmeState m a =
                    )
 
 
-newFixmeEnv :: FixmePerks m => FilePath -> m FixmeEnv
-newFixmeEnv path = do
+
+newtype LocalConfigFile = LocalConfigFile FilePath
+                          deriving newtype ( Eq
+                                           , Ord
+                                           , Show
+                                           , IsString
+                                           , Generic
+                                           , Monoid
+                                           , Semigroup
+                                           )
+
+newtype LocalDatabaseFile = LocalDatabaseFile FilePath
+                            deriving newtype ( Eq
+                                             , Ord
+                                             , Show
+                                             , IsString
+                                             , Generic
+                                             , Monoid
+                                             , Semigroup
+                                             )
+
+
+newtype LocalStateDir = LocalStateFile FilePath
+                        deriving newtype ( Eq
+                                         , Ord
+                                         , Show
+                                         , IsString
+                                         , Generic
+                                         , Monoid
+                                         , Semigroup
+                                         )
+
+
+newFixmeEnvDefault :: FixmePerks m
+                   => m FixmeEnv
+newFixmeEnvDefault = newFixmeEnv mempty Nothing Nothing
+
+newFixmeEnv :: FixmePerks m
+            => [Syntax C]
+            -> Maybe LocalConfigFile
+            -> Maybe LocalDatabaseFile
+            -> m FixmeEnv
+
+newFixmeEnv conf lconf ldbfile = do
+
+  (localConf, lcp) <- maybe1 lconf (pure mempty) $ \path  -> do
+     cpath <- canonicalizePath (coerce path)
+
+     touch cpath
+
+     try @_ @IOException (liftIO (readFile cpath))
+               <&> fromRight mempty
+               <&> parseTop
+               <&> fromRight mempty
+               <&> (,takeDirectory cpath)
+
+  xdg <- liftIO (getXdgDirectory XdgConfig "fixme")
+             <&> (</> "config")
+
+  userConf <- try @_ @IOException (liftIO (readFile xdg))
+                 <&> fromRight mempty
+                 <&> parseTop
+                 <&> fromRight mempty
+
+  let theConf = localConf <> userConf <> conf
+
+  let dbFrom lc = lc <&> \s -> takeDirectory (coerce s) </> "state.db"
+
+  let db = (coerce ldbfile <|> dbFrom lconf)
+              & fromMaybe ".fixme/state.db"
+
   let dbOpts = dbPipeOptsDef
-  let dbfile = (path & takeDirectory) </> "state.db"
-  FixmeEnv <$>  newDBPipeEnv dbOpts dbfile
+  FixmeEnv lcp theConf <$>  newDBPipeEnv dbOpts db
 
 
 runFixmeState :: FixmePerks m => FixmeEnv -> FixmeState m a -> m a

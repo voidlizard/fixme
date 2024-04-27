@@ -54,20 +54,19 @@ runInit = liftIO do
 
   print $ pretty "init" <+> pretty confDir
 
-  path <- getLocalConfigPath
+  e <- newFixmeEnvDefault
 
-  createDirectoryIfMissing True confDir
-  confExists <- doesFileExist confFile
-  logExists <- doesFileExist logFile
+  let path = view localStateDir e
+  let lcf = view localConfigFile e
+
+  mkdir path
+
+  confExists <- doesFileExist lcf
 
   unless confExists do
-    Text.writeFile confFile defConfig
+    Text.writeFile lcf defConfig
 
-  unless logExists do
-    Text.writeFile logFile defLog
-    env <- newFixmeEnv path
-
-    runFixmeState env do
+    runFixmeState e do
       liftIO $ print $ pretty "init db"
       withState initState
 
@@ -78,32 +77,26 @@ runUuid = do
   print $ pretty "uuid:" <+> pretty (show uuid)
 
 
-runList :: FixmePerks m => ListOpts -> m ()
+runList :: FixmePerks m => ListOpts -> FixmeState m ()
 runList opt = do
 
-  path <- getLocalConfigPath
+  cfgFile <- liftIO $ readFile confFile
 
-  e <- newFixmeEnv path
+  r <- pure (parseTop cfgFile) `orDie` "can't parse config"
 
-  runFixmeState e do
+  filt <- if view listFiltExact  opt then do
+            let ss = opt ^. listFilters
+            let flt = parseFilt ss
+            pure $ Filt flt
+          else
+            pure $ Filt $ opt ^. listFilters
 
-    cfgFile <- liftIO $ readFile confFile
+  let brief = ["builtin:list-brief"]
+  let full  = ["builtin:list-full"]
 
-    r <- pure (parseTop cfgFile) `orDie` "can't parse config"
+  let report = if view listShowFull opt then full else brief
 
-    filt <- if view listFiltExact  opt then do
-              let ss = opt ^. listFilters
-              let flt = parseFilt ss
-              pure $ Filt flt
-            else
-              pure $ Filt $ opt ^. listFilters
-
-    let brief = ["builtin:list-brief"]
-    let full  = ["builtin:list-full"]
-
-    let report = if view listShowFull opt then full else brief
-
-    runReport report (Just filt)
+  runReport report (Just filt)
 
 
 newtype HighlightFixmeBegin = HighlightFixmeBegin Int
@@ -111,54 +104,53 @@ newtype HighlightFixmeBegin = HighlightFixmeBegin Int
 instance PagerFeatures HighlightFixmeBegin where
   pagerHighlightRow (HighlightFixmeBegin x) = Just x
 
-runCat :: FixmePerks m => FixmeHash -> Maybe Int -> Maybe Int -> m ()
+runCat :: FixmePerks m => FixmeHash -> Maybe Int -> Maybe Int -> FixmeState m ()
 runCat h mbefore mafter = do
 
-  path <- getLocalConfigPath
-
-  e <- newFixmeEnv path
-
-  cfg <- getLocalConfig
+  cfg <- asks (view config)
   ctx <- getDefaultContext cfg
 
-  runFixmeState e $ do
-    ii <- findId (show $ pretty h) <&> listToMaybe
-    i <- pure ii  `orDie` show ("fixme not found" <+> pretty h)
-    fxm <- getFixme i `orDie` show ("fixme not found" <+> pretty h)
+  ii <- findId (show $ pretty h) <&> listToMaybe
+  i <- pure ii  `orDie` show ("fixme not found" <+> pretty h)
+  fxm <- getFixme i `orDie` show ("fixme not found" <+> pretty h)
 
-    let bef   = fromMaybe 0 (mbefore <|> fmap fst ctx)
-    let aft   = fromMaybe 0 (mafter  <|> fmap snd ctx)
-    let self  = length ( fxm ^. fixmeBody )
-    let num   = bef + self + aft
-    let from  = max 0 ( fxm ^. fixmeLine - bef - 1)
-
-
-    -- FIXME: check of file is really big
-    --   use streaming instead of LBS(?)
-    o <- gitReadObject (view fixmeFileGitHash fxm)
-
-    let feat = HighlightFixmeBegin (min (fxm ^. fixmeLine) (bef+1))
-
-    let ls = take num $ drop from $ LBS.lines o
-
-    pager <- getPager feat fxm cfg
-
-    -- FIXME: use-pager-with-colors!
-    --   or temporaty file?
-    maybe1 pager (liftIO $ for_ ls LBS.putStrLn)
-     \pgr -> liftIO do
-        -- print $ pretty pgr
-        -- exitFailure
-        let input = byteStringInput (LBS.unlines ls)
-        let cmd = setStdin input $ setStderr closed
-                                 $ shell [qc|{pgr}|]
-        code <- runProcess cmd
-
-        unless ( code == ExitSuccess ) do
-          liftIO $ for_ ls LBS.putStrLn
+  let bef   = fromMaybe 0 (mbefore <|> fmap fst ctx)
+  let aft   = fromMaybe 0 (mafter  <|> fmap snd ctx)
+  let self  = length ( fxm ^. fixmeBody )
+  let num   = bef + self + aft
+  let from  = max 0 ( fxm ^. fixmeLine - bef - 1)
 
 
+  -- FIXME: check of file is really big
+  --   use streaming instead of LBS(?)
+  o <- gitReadObject (view fixmeFileGitHash fxm)
 
+  let feat = HighlightFixmeBegin (min (fxm ^. fixmeLine) (bef+1))
+
+  let ls = take num $ drop from $ LBS.lines o
+
+  pager <- getPager feat fxm cfg
+
+  -- FIXME: use-pager-with-colors!
+  --   or temporaty file?
+  maybe1 pager (liftIO $ for_ ls LBS.putStrLn)
+   \pgr -> liftIO do
+      -- print $ pretty pgr
+      -- exitFailure
+      let input = byteStringInput (LBS.unlines ls)
+      let cmd = setStdin input $ setStderr closed
+                               $ shell [qc|{pgr}|]
+      code <- runProcess cmd
+
+      unless ( code == ExitSuccess ) do
+        liftIO $ for_ ls LBS.putStrLn
+
+
+
+withDefaultState :: FixmePerks m => FixmeState m a -> m a
+withDefaultState m = do
+  env <- newFixmeEnvDefault
+  runFixmeState env m
 
 main :: IO ()
 main = join . customExecParser (prefs showHelpOnError) $
@@ -204,7 +196,10 @@ main = join . customExecParser (prefs showHelpOnError) $
       filt <- many $ strArgument  ( metavar "FILTER" )
       pure $ ListOpt full filt exact
 
-    pList = runList <$> pListOpts
+    pList = do
+      o <- pListOpts
+      pure do
+        withDefaultState $ runList o
 
     pSetOpts = do
       attr <- strArgument ( metavar "ATTRIBUTE" )
@@ -214,26 +209,30 @@ main = join . customExecParser (prefs showHelpOnError) $
       pure (dry, [qc|fixme-set {attr} {val} {fx}|])
 
     pSet = do
-      uncurry runLog <$> pSetOpts
+      p <- pSetOpts
+      pure $ withDefaultState do
+        uncurry runLog p
 
     pDel = do
       fx  <- strArgument ( metavar "ID" )
       dry <- flag False True ( long "dry" <> short 'n' <> help "dry run" )
-      pure $ runLog dry [qc|fixme-del {fx}|]
+      pure $ withDefaultState do
+        runLog dry [qc|fixme-del {fx}|]
 
     pMerge = do
       a  <- strArgument ( metavar "FROM" )
       b  <- strArgument ( metavar "TO" )
       dry <- flag False True ( long "dry" <> short 'n' <> help "dry run" )
-      pure $ runLog dry [qc|fixme-merged {a} {b}|]
-
+      pure do
+        env <- newFixmeEnvDefault
+        runFixmeState env do
+           runLog dry [qc|fixme-merged {a} {b}|]
 
     pCat = do
       fxid  <- strArgument ( metavar "ID" )
       b     <- optional $ option auto ( long "before" <> short 'B' <> help "lines before"  )
       a     <- optional $ option auto ( long "after" <> short 'A' <> help "lines after"  )
-      pure $ runCat fxid b a
-
+      pure $ withDefaultState $ runCat fxid b a
 
     pMeta =    command "attribs" (info pMetaAttr  (progDesc "list attributes"))
             <> command "config" (info pConf (progDesc "dumps config"))
@@ -243,20 +242,14 @@ main = join . customExecParser (prefs showHelpOnError) $
       pure runListAttribs
 
     pConf = pure do
-
-      cfgFile <- readFile confFile
-
-      -- FIXME: better error handling
-      r <- pure (parseTop cfgFile) `orDie` "can't parse config"
-
-      print $ vcat (fmap pretty r)
+      withDefaultState do
+        conf <- asks (view config)
+        liftIO $ print $ vcat (fmap pretty conf)
 
     pReport = do
       args <- many $ strArgument ( metavar "REPORT-NAME" )
       pure do
-        conf <- getLocalConfigPath
-        env <- newFixmeEnv conf
-        runFixmeState env $ runReport args Nothing
+        withDefaultState $ runReport args Nothing
 
     pLogMacro = do
       args <- some $ strArgument ( metavar "MACRO-ARGS" )
