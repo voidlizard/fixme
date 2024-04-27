@@ -416,6 +416,12 @@ behaviour is in process.
 
 ### How do I assign a fixmie to a someone?
 
+First of all you should define an attribute \'assigned\' in your config file.
+
+    fixme-attribs assigned
+
+And then run this command
+
     fixme set assigned Alice 9FcnrRf8s
 
 It will just set a text attribute \'assigned\' to value \'Alice\'. How
